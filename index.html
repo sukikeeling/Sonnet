@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>十四行诗</title>
+<link rel="stylesheet" href="css/style.css?v=4">
+</head>
+<body>
+
+<!-- ========== INTRO / ONBOARDING ========== -->
+<div id="intro-screen" class="screen active">
+  <div class="intro-bg-pattern"></div>
+
+  <div class="intro-top-nav" id="intro-nav">
+    <button id="intro-back" class="intro-nav-btn" aria-label="返回">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button id="intro-skip" class="intro-nav-btn intro-skip-btn">跳过</button>
+  </div>
+
+  <div class="intro-slides" id="intro-slides">
+    <!-- Slide 0: Splash -->
+    <div class="intro-slide active" data-step="0">
+      <div class="intro-slide-inner">
+        <div class="intro-icon splash-icon">
+          <span class="icon-star">✦</span>
+        </div>
+        <h2 class="intro-title">十四行诗</h2>
+        <div class="intro-divider"></div>
+        <p class="intro-subtitle">说人话就好，宝宝 ✦</p>
+      </div>
+    </div>
+
+    <!-- Slide 1: Chat -->
+    <div class="intro-slide" data-step="1">
+      <div class="intro-slide-inner">
+        <div class="intro-icon">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h2 class="intro-title">自由对话</h2>
+        <p class="intro-desc">文案、代码、分析、建议……<br>有什么想说的，直接告诉我</p>
+      </div>
+    </div>
+
+    <!-- Slide 2: Model -->
+    <div class="intro-slide" data-step="2">
+      <div class="intro-slide-inner">
+        <div class="intro-icon">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </div>
+        <h2 class="intro-title">智能模型</h2>
+        <p class="intro-desc">DeepSeek、Claude、GPT……<br>多种大模型，随时切换</p>
+      </div>
+    </div>
+
+    <!-- Slide 3: Welcome -->
+    <div class="intro-slide" data-step="3">
+      <div class="intro-slide-inner">
+        <div class="intro-icon welcome-icon">
+          <span style="font-size:48px">ฅ( ̳• ◡ • ̳)ฅ</span>
+        </div>
+        <h2 class="intro-title">准备好了</h2>
+        <p class="intro-desc">我来替宝宝搞定一切 💕</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="intro-bottom">
+    <div class="intro-dots">
+      <span class="intro-dot active" data-dot="0"></span>
+      <span class="intro-dot" data-dot="1"></span>
+      <span class="intro-dot" data-dot="2"></span>
+      <span class="intro-dot" data-dot="3"></span>
+    </div>
+    <button id="intro-next" class="intro-next-btn">
+      <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <span class="btn-text">开始体验</span>
+    </button>
+  </div>
+</div>
+
+<!-- ========== CHAT SCREEN ========== -->
+<div id="chat-screen" class="screen">
+  <!-- 滚动水印背景 -->
+  <div class="chat-watermark" aria-hidden="true"></div>
+  <div class="chat-bg-pattern"></div>
+
+  <!-- 设置按钮浮于右上角 -->
+  <button id="btn-settings" class="header-btn-float" title="设置">⚙</button>
+
+  <div id="chat-messages">
+    <!-- 顶部标题区（模仿图片样式） -->
+    <div class="chat-hero">
+      <div class="hero-brand">CLAUDE OPUS · 十四行诗</div>
+      <h1 class="hero-title">✦ Sonnet ✦</h1>
+      <div class="hero-divider"></div>
+      <p class="hero-subtitle">说人话就好，宝宝 ✦</p>
+    </div>
+    <!-- 欢迎气泡 -->
+    <div class="welcome-msg">
+      <div class="welcome-center">
+        <div class="welcome-emoji">ฅ( ̳• ◡ • ̳)ฅ</div>
+        <div class="welcome-text">有什么想说的，直接告诉我～<br>文案、代码、分析、建议……<br>我来替宝宝搞定 💕</div>
+      </div>
+    </div>
+  </div>
+  <div id="input-bar">
+    <div class="input-wrapper">
+      <textarea id="chat-input" rows="1" placeholder="说人话就好～" maxlength="4096"></textarea>
+      <button id="btn-send" class="send-btn" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      </button>
+    </div>
+    <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
+  </div>
+</div>
+
+<!-- ========== SETTINGS SCREEN ========== -->
+<div id="settings-screen" class="screen">
+  <div class="chat-bg-pattern"></div>
+  <div id="settings-header">
+    <button id="settings-back" class="header-btn">←</button>
+    <span class="header-title">设置</span>
+    <div style="width:40px"></div>
+  </div>
+  <div class="settings-body">
+    <div class="section">
+      <div class="section-title">API 配置</div>
+      <label class="field-label">API Key</label>
+      <input type="password" id="s-api-key" class="field-input" placeholder="输入你的 API Key">
+      <label class="field-label">API 地址</label>
+      <input type="text" id="s-api-url" class="field-input" placeholder="例如 https://api.deepseek.com/v1">
+      <label class="field-label">模型</label>
+      <input type="text" id="s-model" class="field-input" placeholder="输入模型名称">
+      <div class="model-quick-fill">
+        <button class="quick-fill-btn" data-model="deepseek-chat">deepseek-chat</button>
+        <button class="quick-fill-btn" data-model="deepseek-v4-flash">deepseek-v4-flash</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">参数调整</div>
+      <label class="field-label">Temperature <span id="temp-val" class="field-val">0.7</span></label>
+      <input type="range" id="s-temperature" class="field-range" min="0" max="2" step="0.1" value="0.7">
+      <label class="field-label">Max Tokens</label>
+      <input type="number" id="s-max-tokens" class="field-input" value="4096">
+    </div>
+    <div class="section">
+      <div class="section-title">系统提示词</div>
+      <textarea id="s-system-prompt" class="field-textarea" rows="4" placeholder="可选：设定 AI 的角色和行为..."></textarea>
+    </div>
+    <button id="s-save" class="save-btn">保存设置</button>
+  </div>
+</div>
+
+<!-- ========== TOAST ========== -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/app.js?v=4"></script>
+</body>
+</html>
