@@ -89,18 +89,30 @@
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      if (raw) settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-    } catch {}
+      if (raw) {
+        const saved = JSON.parse(raw);
+        settings = { ...DEFAULT_SETTINGS, ...saved };
+      }
+    } catch {
+      settings = { ...DEFAULT_SETTINGS };
+    }
   }
+  
   function saveSettings() {
-    try { localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); } catch {}
+    try { 
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings)); 
+    } catch (err) {
+      console.error('保存设置失败:', err);
+    }
   }
+  
   function loadHistory() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
       if (raw) messages = JSON.parse(raw);
     } catch {}
   }
+  
   function saveHistory() {
     try { localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages)); } catch {}
   }
@@ -255,7 +267,7 @@
   }
 
   // ==========================================
-  //  CHAT — SEND MESSAGE
+  //  CHAT — SEND MESSAGE (核心修改)
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -278,7 +290,11 @@
     const loadEl = appendLoading();
 
     try {
-      const sysPrompt = settings.systemPrompt || DEFAULT_SYSTEM_PROMPT;
+      // 【修复】确保系统提示词正确应用
+      const sysPrompt = (settings.systemPrompt && settings.systemPrompt.trim()) 
+                        ? settings.systemPrompt.trim() 
+                        : DEFAULT_SYSTEM_PROMPT;
+      
       const body = {
         model: settings.model,
         max_tokens: settings.maxTokens,
@@ -344,7 +360,7 @@
   }
 
   // ==========================================
-  //  SETTINGS UI
+  //  SETTINGS UI (核心修改)
   // ==========================================
   function populateSettings() {
     $sApiKey.value = settings.apiKey || '';
@@ -353,7 +369,13 @@
     $sTemperature.value = settings.temperature;
     $tempVal.textContent = settings.temperature;
     $sMaxTokens.value = settings.maxTokens;
-    $sSystemPrompt.value = settings.systemPrompt;
+    
+    // 【修复】正确显示当前系统提示词
+    if (settings.systemPrompt && settings.systemPrompt.trim()) {
+      $sSystemPrompt.value = settings.systemPrompt;
+    } else {
+      $sSystemPrompt.value = DEFAULT_SYSTEM_PROMPT;
+    }
   }
 
   function collectSettings() {
@@ -362,7 +384,15 @@
     settings.model = $sModel.value.trim();
     settings.temperature = parseFloat($sTemperature.value);
     settings.maxTokens = parseInt($sMaxTokens.value, 10) || 4096;
-    settings.systemPrompt = $sSystemPrompt.value.trim();
+    
+    // 【修复】正确保存系统提示词
+    const systemPromptValue = $sSystemPrompt.value.trim();
+    if (systemPromptValue) {
+      settings.systemPrompt = systemPromptValue;
+    } else {
+      settings.systemPrompt = '';  // 明确设置为空，让 fallback 到默认
+    }
+    
     saveSettings();
     showToast('设置已保存 ✦');
   }
