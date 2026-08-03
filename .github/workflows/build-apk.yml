@@ -12,11 +12,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -26,28 +21,37 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Create www directory
-        run: mkdir -p www
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Install Capacitor
         run: |
+          npm install -g @capacitor/cli @capacitor/core @capacitor/android
+
+      - name: Create Capacitor project
+        run: |
+          mkdir -p build-app/www
+          cp index.html build-app/www/
+          mkdir -p build-app/www/css build-app/www/js
+          cp css/style.css build-app/www/css/
+          cp js/app.js build-app/www/js/
+          cd build-app
           npm init -y
           npm install @capacitor/cli @capacitor/core @capacitor/android
-
-      - name: Init Capacitor
-        run: |
           npx cap init "十四行诗" "com.sonnet.app" --web-dir ./www
           npx cap add android
 
       - name: Build APK
-        env:
-          CAPACITOR_ANDROID_STUDIO_PATH: ""
         run: |
-          cd android
-          ./gradlew assembleDebug
+          cd build-app/android
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: sonnet-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: build-app/android/app/build/outputs/apk/debug/*.apk
