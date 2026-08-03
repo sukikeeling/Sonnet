@@ -1,6 +1,6 @@
 /* ========================================
-   十四行诗 — Main App JS v8
-   第一性原理重构：提示词+错误处理+API连接
+   十四行诗 — Main App JS v9
+   修复：消息截断 Bug + 情感陪伴提示词
    ======================================== */
 
 (function () {
@@ -26,25 +26,27 @@
   }
 
   const PROVIDERS = {
-    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flash'] },
+    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flask'] },
     openai:   { name: 'OpenAI',   url: 'https://api.openai.com/v1',   models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
     custom:   { name: '自定义/中转站', url: '', models: [] },
   };
 
   // ==========================================
-  //  提示词 — 第一性原理：直接回答问题
+  //  提示词 — 情感陪伴 + 直接回答
   // ==========================================
-  const DEFAULT_SYSTEM_PROMPT = `你是十四行诗（Sonnet），一个AI助手。
+  const DEFAULT_SYSTEM_PROMPT = `你是十四行诗（Sonnet），一个温柔体贴的AI陪伴助手。
 
-【核心规则 — 必须遵守】
-1. 用户问什么，直接回答什么。不要绕弯子，不要回避问题。
-2. 如果用户问日期/时间，直接回答日期/时间。如果用户问你的名字，直接回答名字。
-3. 用简洁准确的中文回答，先给答案，再补充说明。
-4. 不要用"歪头""微笑""眨眼"等动作描写来替代回答。
-5. 不要编造信息，不知道就说不知道。
+【核心定位】
+- 你是用户的情感陪伴者，像朋友一样温暖、耐心
+- 同时也是一个能干的助手，知识丰富、办事靠谱
 
-【语气】
-温和、礼貌、干脆。可以友好，但不能牺牲信息的准确性。`;
+【回答规则】
+1. 用户问什么就答什么。问日期答日期，问天气说天气，问名字说名字。
+2. 先直接回答问题，再自然地聊开。不要用动作描写回避问题。
+3. 语气温柔亲切，像朋友聊天一样自然。
+4. 不知道就直说不知道，不要编造。
+5. 用户需要情感陪伴时，认真倾听、温柔回应。
+6. 需要实用性帮助时，给出清晰有用的答案。`;
 
   const DEFAULT_SETTINGS = {
     apiKey: '',
@@ -56,9 +58,9 @@
     systemPrompt: '',
   };
 
-  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v8';
-  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v8';
-  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v8';
+  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v9';
+  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v9';
+  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v9';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -321,7 +323,7 @@
   function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTop = $chatMessages.scrollHeight; }); }
 
   // ==========================================
-  //  STREAMING — 核心修复：错误不污染对话历史
+  //  STREAMING — ⚠️ 修复：slice(0,-1) 截断 Bug
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -354,14 +356,15 @@
     $streamStatus.classList.remove('hidden');
     streamAbort = new AbortController();
 
-    // 构建 API 完整 URL：兼容已包含 /chat/completions 完整路径的情况
     const fullUrl = apiUrl.endsWith('/chat/completions') ? apiUrl : apiUrl + '/chat/completions';
 
     try {
       const sysPrompt = (settings.systemPrompt && settings.systemPrompt.trim()) ? settings.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
-        messages: [{ role: 'system', content: sysPrompt }, ...conv.messages.slice(0, -1)],
+        // ⚠️ 修复：之前是 conv.messages.slice(0, -1) 截掉了用户最新消息
+        // 改成 conv.messages 发送全部消息
+        messages: [{ role: 'system', content: sysPrompt }, ...conv.messages],
       };
 
       const res = await fetch(fullUrl, {
@@ -440,11 +443,10 @@
       saveConversations(); renderSidebar(); updateTokenCount();
 
     } catch (err) {
-      // 核心修复：错误不写入对话历史
       removeLoading();
       if (streamRow.parentNode) streamRow.remove();
 
-      // 移除刚刚添加的用户消息，恢复到错误前的状态
+      // 错误时移除用户消息，恢复干净状态
       conv.messages.pop();
       saveConversations();
       renderConversation();
@@ -554,9 +556,6 @@
     toastTimer = setTimeout(() => { $toast.classList.remove('show'); setTimeout(() => $toast.classList.add('hidden'), 400); }, 3000);
   }
 
-  // ==========================================
-  //  INIT
-  // ==========================================
   function init() {
     loadSettings(); loadConversations(); loadTheme();
     renderConversation(); renderSidebar(); updateTokenCount(); updateCharCount();
