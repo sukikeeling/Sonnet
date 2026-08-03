@@ -8,12 +8,10 @@
 (function () {
   'use strict';
 
-  // ---- 依赖检查 ----
   if (typeof marked === 'undefined' || typeof hljs === 'undefined' || typeof DOMPurify === 'undefined') {
     console.warn('部分 CDN 库未加载，将降级为纯文本模式');
   }
 
-  // ---- 配置 marked 使用 highlight.js ----
   if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
     marked.setOptions({
       highlight: function(code, lang) {
@@ -29,7 +27,6 @@
     });
   }
 
-  // ---- Defaults ----
   const DEFAULT_SETTINGS = {
     apiKey: '',
     apiUrl: 'https://api.deepseek.com/v1',
@@ -76,8 +73,8 @@
   const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v5';
   const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v5';
 
-  // ---- DOM refs ----
   const $introScreen    = document.getElementById('intro-screen');
+  const $appLayout      = document.getElementById('app-layout');
   const $chatScreen     = document.getElementById('chat-screen');
   const $settingsScreen = document.getElementById('settings-screen');
   const $introNav       = document.getElementById('intro-nav');
@@ -113,13 +110,12 @@
   const $tokenCount     = document.getElementById('token-count');
   const $btnClearChat   = document.getElementById('btn-clear-chat');
 
-  // ---- State ----
   let introStep = 0;
   let introDone = false;
   let loading = false;
-  let streamAbort = null; // AbortController
+  let streamAbort = null;
   let settings = { ...DEFAULT_SETTINGS };
-  let conversations = []; // array of { id, title, messages, createdAt }
+  let conversations = [];
   let currentConvId = null;
   let theme = 'light';
 
@@ -222,31 +218,21 @@
   }
 
   // ==========================================
-  //  SCREEN TRANSITIONS
+  //  SCREEN TRANSITIONS (简化版：直接显示/隐藏)
   // ==========================================
-  function showScreen(from, to, direction) {
-    const outClass = direction === 'forward' ? 'slide-out-left' : 'slide-out-right';
-    const inClass  = direction === 'forward' ? 'slide-in-right' : 'slide-in-left';
-    from.style.display = 'flex';
-    to.style.display   = 'flex';
-    from.classList.add(outClass);
-    to.classList.add(inClass);
-    function clean() {
-      from.classList.remove('active', outClass);
-      to.classList.remove(inClass);
-      to.classList.add('active');
-      from.style.display = '';
-      from.style.opacity = '';
-      from.style.transform = '';
-      from.removeEventListener('animationend', clean);
-    }
-    to.addEventListener('animationend', clean, { once: true });
-    setTimeout(clean, 600);
+  function switchToChat() {
+    $introScreen.classList.add('hidden');
+    $appLayout.classList.add('visible');
   }
 
-  function switchToChat() { showScreen($introScreen, $chatScreen, 'forward'); }
-  function switchToSettings() { showScreen($chatScreen, $settingsScreen, 'forward'); }
-  function switchFromSettings() { showScreen($settingsScreen, $chatScreen, 'back'); }
+  function switchToSettings() {
+    populateSettings();
+    $settingsScreen.classList.add('active');
+  }
+
+  function switchFromSettings() {
+    $settingsScreen.classList.remove('active');
+  }
 
   // ==========================================
   //  INTRO
@@ -278,11 +264,10 @@
   function completeIntro() { introDone = true; switchToChat(); }
 
   // ==========================================
-  //  RENDER — CONVERSATION
+  //  RENDER
   // ==========================================
   function renderConversation() {
     const conv = getCurrentConv();
-    // 清除所有消息（保留 hero 和 welcome）
     const children = Array.from($chatMessages.children);
     children.forEach(c => {
       if (!c.classList.contains('welcome-msg') && !c.hasAttribute('data-keep'))
@@ -347,9 +332,6 @@
     return div.innerHTML;
   }
 
-  // ==========================================
-  //  RENDER — MESSAGES
-  // ==========================================
   function appendMessage(role, content, animate) {
     const row = document.createElement('div');
     row.className = 'msg-row ' + role;
@@ -358,7 +340,6 @@
     if (role === 'assistant') {
       row.innerHTML = '<div class="bot-avatar">✦</div><div class="bot-msg"></div>';
       const msgEl = row.querySelector('.bot-msg');
-      // 使用 Markdown 渲染 + 安全过滤
       if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
         const html = marked.parse(content || '');
         msgEl.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
@@ -373,7 +354,6 @@
       row.querySelector('.user-msg').textContent = content;
     }
 
-    // 消息操作按钮（复制、编辑、删除）
     const actions = document.createElement('div');
     actions.className = 'msg-actions';
     if (role === 'assistant') {
@@ -434,7 +414,7 @@
   }
 
   // ==========================================
-  //  STREAMING — SSE 流式响应
+  //  STREAMING
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -616,9 +596,6 @@
     if (streamAbort) streamAbort.abort();
   }
 
-  // ==========================================
-  //  TOKEN 计数（估算）
-  // ==========================================
   function updateTokenCount() {
     const conv = getCurrentConv();
     if (!conv) { $tokenCount.textContent = '0'; return; }
@@ -627,9 +604,6 @@
     $tokenCount.textContent = estimated;
   }
 
-  // ==========================================
-  //  INPUT HANDLING
-  // ==========================================
   function autoResize() {
     const ta = $chatInput;
     ta.style.height = 'auto';
@@ -649,9 +623,6 @@
     }
   }
 
-  // ==========================================
-  //  SETTINGS UI
-  // ==========================================
   function populateSettings() {
     $sApiKey.value = settings.apiKey || '';
     $sApiUrl.value = settings.apiUrl || DEFAULT_SETTINGS.apiUrl;
@@ -678,9 +649,6 @@
     showToast('设置已保存 ✦');
   }
 
-  // ==========================================
-  //  EXPORT
-  // ==========================================
   function exportConversation() {
     const conv = getCurrentConv();
     if (!conv || conv.messages.length === 0) {
@@ -702,9 +670,6 @@
     showToast('已导出为 Markdown ✦');
   }
 
-  // ==========================================
-  //  THEME
-  // ==========================================
   function toggleTheme() {
     theme = theme === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
@@ -719,9 +684,6 @@
     }
   }
 
-  // ==========================================
-  //  TOAST
-  // ==========================================
   let toastTimer = null;
   function showToast(msg) {
     clearTimeout(toastTimer);
@@ -742,8 +704,6 @@
     loadConversations();
     loadTheme();
 
-    $chatScreen.classList.remove('active');
-
     renderConversation();
     renderSidebar();
     updateTokenCount();
@@ -760,7 +720,6 @@
       }
     }
 
-    // ---- Event listeners ----
     $introNext.addEventListener('click', introForward);
     $introBack.addEventListener('click', introBack);
     $introSkip.addEventListener('click', completeIntro);
