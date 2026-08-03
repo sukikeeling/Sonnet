@@ -42,22 +42,24 @@ jobs:
           npx cap init "十四行诗" "com.sonnet.app" --web-dir ./www
           npx cap add android
 
-      - name: Build release APK
+      - name: Build debug APK
         run: |
           cd app/android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon 2>&1 | tail -100
+          ./gradlew assembleDebug --no-daemon 2>&1
 
-      - name: Find and upload APK
+      - name: Find APK
         run: |
-          echo "Searching for APKs..."
+          find /home/runner/work -name "*.apk" -type f 2>/dev/null || true
           find . -name "*.apk" -type f 2>/dev/null || true
           mkdir -p apk-out
+          find /home/runner/work -name "*.apk" -type f -exec cp {} apk-out/ \; 2>/dev/null || true
           find . -name "*.apk" -type f -exec cp {} apk-out/ \; 2>/dev/null || true
-          ls -la apk-out/ || echo "No APK found"
+          ls -la apk-out/ || echo "No files in apk-out"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: sonnet-apk
           path: apk-out/
+          if-no-files-found: error
