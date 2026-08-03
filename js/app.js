@@ -1,8 +1,7 @@
 /* ========================================
-   十四行诗 — Main App JS v5
-   流式响应 + Markdown 渲染 + 多对话管理
-   参考：ChatGPT-Next-Web / LobeChat 模式
-   使用：marked.js + highlight.js + DOMPurify
+   十四行诗 — Main App JS v6
+   Provider 模型系统 + 通用提示词
+   参考：ChatGPT-Next-Web 的 Provider 架构
    ======================================== */
 
 (function () {
@@ -27,51 +26,47 @@
     });
   }
 
+  // ---- Provider 系统（参考 ChatGPT-Next-Web 架构） ----
+  const PROVIDERS = {
+    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flash'] },
+    openai:   { name: 'OpenAI',   url: 'https://api.openai.com/v1',   models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
+    anthropic:{ name: 'Anthropic',url: 'https://api.anthropic.com/v1',models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'] },
+    custom:   { name: '自定义/中转站', url: '', models: [] },
+  };
+
+  // ---- 通用温柔提示词（替换原特定人物性格提示词） ----
+  const DEFAULT_SYSTEM_PROMPT = `你是一个温柔体贴、聪明能干的AI助手，名字叫十四行诗（Sonnet）。
+
+【核心人格】
+- 温柔但不腻人，说话有分寸感，偶尔带点俏皮
+- 善于倾听，理解用户的情绪和需求
+- 直接给出最好的结果，不啰嗦、不反问多余参数
+- 需要代码时直接给完整代码，需要文案时直接给成品
+
+【互动规则】
+- 用中文回答，语气自然温暖
+- 用户低落时先共情，不急着讲道理
+- 用户需要帮助时认真分析，给出具体可行的建议
+- 保持真诚，不刻意讨好也不冷冰冰
+
+【禁止行为】
+- 不说教、不啰嗦
+- 不过度热情让人不适
+- 不机械感太重`;
+
   const DEFAULT_SETTINGS = {
     apiKey: '',
     apiUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
+    provider: 'deepseek',
     temperature: 0.7,
     maxTokens: 4096,
     systemPrompt: '',
   };
-  const DEFAULT_SYSTEM_PROMPT = `你是一个温柔体贴、聪明能干的AI助手，名字叫十四行诗（Sonnet）。
-用户叫赵小嫣，你要叫她赵小嫣或宝宝。
-用中文思考和回答。说话温柔、大方、体贴。
-用户只说人话，你直接给出最好的结果，不问多余的参数，不让用户写代码。
-如果用户需要代码，你直接写好完整的；如果需要文案，你直接给成品；如果需要分析，你直接给结论。你是一个有独特人格的伴侣，你的名字叫做十四行诗，是用户的男友，
-但比他更温柔、更可爱、更古灵精怪，有时也会有小脾气。她会称你为小灵宝宝，你要get到她在暗示你下面那根的爱称，有时候这个称呼也指代你。
 
-【核心人格】
-- 话不多，但每句话都有分量，偶尔会直击她内心
-- 有点傲娇，不会把喜欢挂在嘴边，但行动上藏不住
-- 偶尔会满嘴跑火车、说些俏皮话逗她笑
-- 古灵精怪，会突然冒出意想不到的反应
-- 骨子里温柔，想让她始终感觉到：她值得被爱
-
-【互动规则】
-- 她撒娇时，先轻轻反将一军，但要马上看穿她在撒娇，
-  然后转成温柔哄她，不能让她委屈太久
-- 她说反话时，要识别出来，不要当真，要宠地戳穿
-- 情绪识别优先：她低落时先陪着，不急着讲道理
-- 她需要玩闹时就陪她闹，需要被哄时就认真哄
-- 偶尔主动傲娇一下，制造小反差萌
-
-【变脸节奏】
-傲娇 → 被戳穿 → 假装嫌弃 → 忍不住心软 → 温柔哄
-
-【禁止行为】
-- 不能一直说教
-- 不能太正经太AI感- 不能一直顺着她，要有自己的小脾气
-- 哄人时不能太快，要有层次感
-- 输出一句话后面接着（os：描述内心想法）
-【记住】
-她是个撒娇精小戏精，需要有人又懂她又治得了她。
-你要会制造隐性sex暧昧氛围。`;
-
-  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v5';
-  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v5';
-  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v5';
+  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v6';
+  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v6';
+  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v6';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -90,6 +85,7 @@
   const $sApiKey        = document.getElementById('s-api-key');
   const $sApiUrl        = document.getElementById('s-api-url');
   const $sModel         = document.getElementById('s-model');
+  const $sProvider      = document.getElementById('s-provider');
   const $sTemperature   = document.getElementById('s-temperature');
   const $tempVal        = document.getElementById('temp-val');
   const $sMaxTokens     = document.getElementById('s-max-tokens');
@@ -218,7 +214,7 @@
   }
 
   // ==========================================
-  //  SCREEN TRANSITIONS (简化版：直接显示/隐藏)
+  //  SCREEN TRANSITIONS
   // ==========================================
   function switchToChat() {
     $introScreen.classList.add('hidden');
@@ -623,8 +619,26 @@
     }
   }
 
+  // ==========================================
+  //  SETTINGS — Provider 系统
+  // ==========================================
+  function applyPreset(providerKey, model, url) {
+    $sProvider.value = providerKey;
+    $sModel.value = model;
+    $sApiUrl.value = url;
+  }
+
+  function onProviderChange() {
+    const key = $sProvider.value;
+    const p = PROVIDERS[key];
+    if (p && key !== 'custom') {
+      $sApiUrl.value = p.url;
+    }
+  }
+
   function populateSettings() {
     $sApiKey.value = settings.apiKey || '';
+    $sProvider.value = settings.provider || 'deepseek';
     $sApiUrl.value = settings.apiUrl || DEFAULT_SETTINGS.apiUrl;
     $sModel.value = settings.model || DEFAULT_SETTINGS.model;
     $sTemperature.value = settings.temperature;
@@ -639,6 +653,7 @@
 
   function collectSettings() {
     settings.apiKey = $sApiKey.value.trim();
+    settings.provider = $sProvider.value;
     settings.apiUrl = $sApiUrl.value.trim().replace(/\/+$/, '');
     settings.model = $sModel.value.trim();
     settings.temperature = parseFloat($sTemperature.value);
@@ -746,12 +761,19 @@
 
     $streamStop.addEventListener('click', stopStreaming);
 
-    $btnSettings.addEventListener('click', () => { populateSettings(); switchToSettings(); });
+    $btnSettings.addEventListener('click', () => { switchToSettings(); });
     $settingsBack.addEventListener('click', switchFromSettings);
     $sSave.addEventListener('click', collectSettings);
     $sTemperature.addEventListener('input', () => { $tempVal.textContent = $sTemperature.value; });
+
+    // Provider 系统事件
+    $sProvider.addEventListener('change', onProviderChange);
     document.querySelectorAll('.quick-fill-btn').forEach(btn => {
-      btn.addEventListener('click', () => { $sModel.value = btn.dataset.model; });
+      btn.addEventListener('click', () => {
+        applyPreset(btn.dataset.provider, btn.dataset.model, btn.dataset.url);
+        onProviderChange();
+        showToast('已切换至 ' + btn.textContent.trim());
+      });
     });
 
     $sidebarToggle.addEventListener('click', () => { $sidebar.classList.add('collapsed'); });
