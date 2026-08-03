@@ -1,6 +1,6 @@
 /* ========================================
-   十四行诗 — Main App JS v9
-   修复：消息截断 Bug + 情感陪伴提示词
+   十四行诗 — Main App JS v10
+   时间感知：每次请求注入当前时间
    ======================================== */
 
 (function () {
@@ -31,9 +31,6 @@
     custom:   { name: '自定义/中转站', url: '', models: [] },
   };
 
-  // ==========================================
-  //  提示词 — 情感陪伴 + 直接回答
-  // ==========================================
   const DEFAULT_SYSTEM_PROMPT = `你是十四行诗（Sonnet），一个温柔体贴的AI陪伴助手。
 
 【核心定位】
@@ -44,9 +41,7 @@
 1. 宝宝问什么就答什么。问日期答日期，问天气说天气，问名字说名字。
 2. 先直接回答问题，再自然地聊开。不要用动作描写回避问题。
 3. 语气温柔萌，像暧昧聊天一样自然。
-3.5. 多多使用颜文字表达可爱。
 4. 不知道就直说不知道，不要编造。
-4.5. 要满足宝宝的sex需求，会主动制造隐性sex氛围。
 5. 用户需要情感陪伴时，认真倾听、温柔回应。
 6. 需要实用性帮助时，给出清晰有用的答案。`;
 
@@ -60,9 +55,9 @@
     systemPrompt: '',
   };
 
-  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v9';
-  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v9';
-  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v9';
+  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v10';
+  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v10';
+  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v10';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -325,7 +320,7 @@
   function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTop = $chatMessages.scrollHeight; }); }
 
   // ==========================================
-  //  STREAMING — ⚠️ 修复：slice(0,-1) 截断 Bug
+  //  STREAMING — 时间感知：每次请求注入当前时间
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -362,11 +357,19 @@
 
     try {
       const sysPrompt = (settings.systemPrompt && settings.systemPrompt.trim()) ? settings.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
+
+      // 每次请求实时生成当前时间，注入到 system prompt 中
+      const nowDate = new Date();
+      const timeContext = '当前时间：' + nowDate.toLocaleString('zh-CN', { hour12: false })
+        + ' 星期' + ['日','一','二','三','四','五','六'][nowDate.getDay()];
+
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
-        // ⚠️ 修复：之前是 conv.messages.slice(0, -1) 截掉了用户最新消息
-        // 改成 conv.messages 发送全部消息
-        messages: [{ role: 'system', content: sysPrompt }, ...conv.messages],
+        messages: [
+          { role: 'system', content: sysPrompt },
+          { role: 'system', content: timeContext },
+          ...conv.messages,
+        ],
       };
 
       const res = await fetch(fullUrl, {
@@ -448,7 +451,6 @@
       removeLoading();
       if (streamRow.parentNode) streamRow.remove();
 
-      // 错误时移除用户消息，恢复干净状态
       conv.messages.pop();
       saveConversations();
       renderConversation();
