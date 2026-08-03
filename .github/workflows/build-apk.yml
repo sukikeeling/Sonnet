@@ -26,36 +26,38 @@ jobs:
         with:
           node-version: 22
 
-      - name: Create Capacitor project
+      - name: Install Capacitor
+        run: npm install -g @capacitor/cli @capacitor/core @capacitor/android
+
+      - name: Create project
         run: |
-          mkdir -p build-app/www
-          cp index.html build-app/www/
-          mkdir -p build-app/www/css build-app/www/js
-          cp css/style.css build-app/www/css/
-          cp js/app.js build-app/www/js/
-          cd build-app
+          mkdir -p app/www
+          cp index.html app/www/
+          mkdir -p app/www/css app/www/js
+          cp css/style.css app/www/css/
+          cp js/app.js app/www/js/
+          cd app
           npm init -y
           npm install @capacitor/cli @capacitor/core @capacitor/android
           npx cap init "十四行诗" "com.sonnet.app" --web-dir ./www
           npx cap add android
 
-      - name: Build APK
+      - name: Build release APK
         run: |
-          cd build-app/android
+          cd app/android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon 2>&1 | tail -100
 
-      - name: Locate and upload APK
+      - name: Find and upload APK
         run: |
-          find build-app -name "*.apk" -type f
-          ls -la build-app/android/app/build/outputs/apk/debug/ 2>/dev/null || echo "No debug APK dir"
-          mkdir -p apk-output
-          cp build-app/android/app/build/outputs/apk/debug/*.apk apk-output/ 2>/dev/null || echo "No APK found at expected path"
-          # Try alternate paths
-          find build-app -name "*.apk" -exec cp {} apk-output/ \; 2>/dev/null || true
+          echo "Searching for APKs..."
+          find . -name "*.apk" -type f 2>/dev/null || true
+          mkdir -p apk-out
+          find . -name "*.apk" -type f -exec cp {} apk-out/ \; 2>/dev/null || true
+          ls -la apk-out/ || echo "No APK found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: sonnet-apk
-          path: apk-output/
+          path: apk-out/
