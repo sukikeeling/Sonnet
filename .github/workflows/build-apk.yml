@@ -1,0 +1,53 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "ci/build-apk" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create www directory
+        run: mkdir -p www
+
+      - name: Install Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+
+      - name: Init Capacitor
+        run: |
+          npx cap init "十四行诗" "com.sonnet.app" --web-dir ./www
+          npx cap add android
+
+      - name: Build APK
+        env:
+          CAPACITOR_ANDROID_STUDIO_PATH: ""
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonnet-apk
+          path: android/app/build/outputs/apk/debug/*.apk
