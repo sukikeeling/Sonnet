@@ -11,6 +11,9 @@
   }
 
   if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
+    // 禁用 strikethrough（~~text~~），防止 AI 回答中的波浪线被渲染为删除线
+    marked.use({ renderer: { del: ({ text }) => '~~' + text + '~~' } });
+
     marked.setOptions({
       highlight: function(code, lang) {
         if (lang && hljs.getLanguage(lang)) {
@@ -47,19 +50,24 @@
 5. 用户需要情感陪伴时，认真倾听、温柔回应。
 6. 需要实用性帮助时，给出清晰有用的答案。`;
 
+  // 存储限制
+  const MAX_MESSAGES_PER_CONV = 50;
+  const MAX_CONVERSATIONS = 20;
+  let saveTimer = null;
+
   const DEFAULT_SETTINGS = {
     apiKey: '',
     apiUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
     provider: 'deepseek',
-    temperature: 0.7,
+    temperature: 0.8,
     maxTokens: 4096,
     systemPrompt: '',
   };
 
-  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v10';
-  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v10';
-  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v10';
+  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v11';
+  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v11';
+  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v11';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -154,7 +162,29 @@
     } catch {}
     if (!conversations || conversations.length === 0) createConversation('新对话');
   }
-  function saveConversations() { try { localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(conversations)); } catch {} }
+  function saveConversations() {
+    try {
+      pruneConversations();
+      // 防抖：2秒内多次调用只保存一次
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(conversations));
+        saveTimer = null;
+      }, 2000);
+    } catch {}
+  }
+
+  // 裁剪对话：限制消息数和对话数
+  function pruneConversations() {
+    conversations.forEach(c => {
+      if (c.messages.length > MAX_MESSAGES_PER_CONV) {
+        c.messages = c.messages.slice(-MAX_MESSAGES_PER_CONV);
+      }
+    });
+    if (conversations.length > MAX_CONVERSATIONS) {
+      conversations = conversations.slice(0, MAX_CONVERSATIONS);
+    }
+  }
 
   function loadTheme() {
     try { const saved = localStorage.getItem(STORAGE_KEY_THEME); if (saved === 'dark' || saved === 'light') theme = saved; } catch {}
@@ -231,6 +261,59 @@
 
   function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
+  // 🎨 情绪颜色渲染 — 扫描 AI 文字，给关键词加颜色
+  const EMOTION_RULES = [
+    // 生气/强烈/重点 → 红色
+    { re: /(生气|愤怒|可恶|不行|必须|绝对|滚|烦|讨厌|恶心|受不了|气死|忍不了|太离谱|疯了|搞什么)/gi, cls: 'emotion-red' },
+    // 暧昧/可爱/撒娇 → 粉色（含颜文字、波浪号、爱心）
+    { re: /(宝宝|宝贝|亲爱|想你了|喜欢你|爱你|么么|抱抱|亲亲|好想你|小可爱|小笨蛋|傻瓜|坏蛋|讨厌啦|人家|萌萌|ฅ|•|◡|≧|∇|≦|ω|♡|❤|💕|💗|💖|~{2,})/gi, cls: 'emotion-pink' },
+    // 忧伤/孤独/低落 → 蓝色
+    { re: /(难过|伤心|寂寞|孤独|失落|悲伤|泪|哭|心痛|心碎|抑郁|绝望|想哭|好累|好难|受不了|空虚)/gi, cls: 'emotion-blue' },
+    // 开心/鼓励/积极 → 绿色
+    { re: /(开心|高兴|棒|加油|太好了|厉害|优秀|完美|牛逼|赞|好棒|很棒|很不错|了不起|恭喜|快乐|幸福|超棒|喜欢|满意)/gi, cls: 'emotion-green' },
+    // 惊讶/好奇/疑问 → 紫色
+    { re: /(真的吗|哇|天哪|不会吧|不可能|难以置信|好奇|好神奇|奇怪|什么|为什么|怎么办|真的假的|惊讶|震惊|吓到)/gi, cls: 'emotion-purple' },
+  ];
+
+  function applyEmotionColors(html) {
+    // 只在 bot 消息的文本内容上应用，跳过代码块和已上色的元素
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const walker = document.createTreeWalker(temp, 4 /* NodeFilter.SHOW_TEXT */, {
+      acceptNode: (node) => {
+        // 跳过代码块内的文本
+        let p = node.parentElement;
+        while (p) {
+          if (p.tagName === 'PRE' || p.tagName === 'CODE' || p.classList.contains('emotion-red') ||
+              p.classList.contains('emotion-pink') || p.classList.contains('emotion-blue') ||
+              p.classList.contains('emotion-green') || p.classList.contains('emotion-purple') ||
+              p.classList.contains('model-badge')) return NodeFilter.FILTER_REJECT;
+          p = p.parentElement;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }, false);
+    const changes = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      let text = node.textContent;
+      let newHtml = text;
+      for (const rule of EMOTION_RULES) {
+        newHtml = newHtml.replace(rule.re, (match) => `<span class="${rule.cls}">${match}</span>`);
+      }
+      if (newHtml !== text) {
+        changes.push({ node, html: newHtml });
+      }
+    }
+    // 从后往前替换，避免 DOM 失效
+    for (let i = changes.length - 1; i >= 0; i--) {
+      const span = document.createElement('span');
+      span.innerHTML = changes[i].html;
+      changes[i].node.parentNode.replaceChild(span, changes[i].node);
+    }
+    return temp.innerHTML;
+  }
+
   function appendMessage(role, content, animate, time, modelName) {
     const row = document.createElement('div');
     row.className = 'msg-row ' + role;
@@ -242,6 +325,7 @@
       if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
         const html = marked.parse(content || '');
         msgEl.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
+        if (typeof applyEmotionColors === 'function') msgEl.innerHTML = applyEmotionColors(msgEl.innerHTML);
         msgEl.querySelectorAll('pre code').forEach(block => { if (typeof hljs !== 'undefined') hljs.highlightElement(block); });
       } else { msgEl.textContent = content || ''; }
       const badge = document.createElement('div');
@@ -360,17 +444,17 @@
     try {
       const sysPrompt = (settings.systemPrompt && settings.systemPrompt.trim()) ? settings.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
 
-      // 每次请求实时生成当前时间，注入到 system prompt 中
+      // 缓存优化：时间信息放在 messages 末尾，不影响前缀缓存
       const nowDate = new Date();
-      const timeContext = '当前时间：' + nowDate.toLocaleString('zh-CN', { hour12: false })
+      const timeStr = '当前时间：' + nowDate.toLocaleString('zh-CN', { hour12: false })
         + ' 星期' + ['日','一','二','三','四','五','六'][nowDate.getDay()];
 
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
         messages: [
           { role: 'system', content: sysPrompt },
-          { role: 'system', content: timeContext },
           ...conv.messages,
+          { role: 'system', content: timeStr },
         ],
       };
 
@@ -415,6 +499,7 @@
               if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
                 const html = marked.parse(fullContent);
                 streamMsgEl.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
+                if (typeof applyEmotionColors === 'function') streamMsgEl.innerHTML = applyEmotionColors(streamMsgEl.innerHTML);
                 streamMsgEl.querySelectorAll('pre code').forEach(block => { if (typeof hljs !== 'undefined') hljs.highlightElement(block); });
               } else { streamMsgEl.textContent = fullContent; }
               scrollToBottom();
@@ -436,6 +521,7 @@
                 if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
                   const html = marked.parse(fullContent);
                   streamMsgEl.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
+                  if (typeof applyEmotionColors === 'function') streamMsgEl.innerHTML = applyEmotionColors(streamMsgEl.innerHTML);
                   streamMsgEl.querySelectorAll('pre code').forEach(block => { if (typeof hljs !== 'undefined') hljs.highlightElement(block); });
                 } else { streamMsgEl.textContent = fullContent; }
               }
@@ -565,6 +651,8 @@
   function init() {
     loadSettings(); loadConversations(); loadTheme();
     renderConversation(); renderSidebar(); updateTokenCount(); updateCharCount();
+    // 默认收起侧边栏，开屏结束后直接显示主界面
+    $sidebar.classList.add('collapsed');
 
     const watermarkEl = document.querySelector('.chat-watermark');
     if (watermarkEl) {
@@ -634,6 +722,65 @@
         else if (dx > 0 && introStep > 0) introBack();
       }
     }, { passive: true });
+
+    // Android 返回键联动 — 导航栈管理（参考 ChatGPT-Next-Web 的 back handler 模式）
+    const navStack = [];
+    const NAV = { SETTINGS: 'settings', SIDEBAR: 'sidebar', INTRO: 'intro' };
+
+    // 在各导航入口 push 状态
+    const origSwitchToSettings = switchToSettings;
+    switchToSettings = function() {
+      navStack.push(NAV.SETTINGS);
+      window.history.pushState({ screen: NAV.SETTINGS }, '');
+      origSwitchToSettings.call(this);
+    };
+    const origSwitchFromSettings = switchFromSettings;
+    switchFromSettings = function() {
+      if (navStack.length > 0 && navStack[navStack.length - 1] === NAV.SETTINGS) navStack.pop();
+      origSwitchFromSettings.call(this);
+    };
+
+    // 侧栏打开/关闭
+    const origSidebarOpen = $sidebarOpen.click;
+    $sidebarOpen.addEventListener('click', () => {
+      navStack.push(NAV.SIDEBAR);
+      window.history.pushState({ screen: NAV.SIDEBAR }, '');
+    }, true);
+    const origSidebarToggle = $sidebarToggle.click;
+    $sidebarToggle.addEventListener('click', () => {
+      if (navStack.length > 0 && navStack[navStack.length - 1] === NAV.SIDEBAR) navStack.pop();
+    }, true);
+
+    window.addEventListener('popstate', (e) => {
+      handleBackButton();
+    });
+    document.addEventListener('backbutton', (e) => {
+      e.preventDefault();
+      handleBackButton();
+    }, false);
+
+    function handleBackButton() {
+      if (navStack.length > 0) {
+        const screen = navStack.pop();
+        if (screen === NAV.SETTINGS) {
+          switchFromSettings();
+        } else if (screen === NAV.SIDEBAR) {
+          $sidebar.classList.add('collapsed');
+        } else if (screen === NAV.INTRO) {
+          if (introStep > 0) introBack();
+          else completeIntro();
+        }
+        // 让 history 状态同步
+        if (window.history.state) window.history.back();
+        return;
+      }
+      // 引导页处理（没有导航栈时）
+      if (!$introScreen.classList.contains('hidden')) {
+        if (introStep > 0) { introBack(); return; }
+        else { completeIntro(); return; }
+      }
+      // 默认：退出应用
+    }
   }
 
   if (document.readyState === 'loading') {

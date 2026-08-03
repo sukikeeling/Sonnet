@@ -450,6 +450,18 @@ input::-webkit-scrollbar { display: none; }
 .bot-msg blockquote { border-left: 3px solid var(--accent-1); padding-left: 12px; margin: 8px 0; color: var(--text-muted); font-style: italic; }
 .bot-msg a { color: var(--accent-1); text-decoration: underline; }
 .bot-msg a:hover { color: var(--accent-2); }
+
+/* 🎨 情绪颜色渲染 */
+.emotion-red    { color: #e06060 !important; font-weight: 500; }
+.emotion-pink   { color: #d4a0c0 !important; font-style: italic; }
+.emotion-blue   { color: #6090c0 !important; }
+.emotion-green  { color: #60a060 !important; }
+.emotion-purple { color: #a060c0 !important; }
+[data-theme="dark"] .emotion-red    { color: #ff8080 !important; }
+[data-theme="dark"] .emotion-pink   { color: #e0b0d0 !important; }
+[data-theme="dark"] .emotion-blue   { color: #80b0e0 !important; }
+[data-theme="dark"] .emotion-green  { color: #80c080 !important; }
+[data-theme="dark"] .emotion-purple { color: #c080e0 !important; }
 .bot-msg hr { border: none; border-top: 1px solid var(--border-light); margin: 12px 0; }
 .bot-msg table { border-collapse: collapse; margin: 8px 0; width: 100%; font-size: 13px; }
 .bot-msg th, .bot-msg td { border: 1px solid var(--border-color); padding: 6px 10px; text-align: left; }
@@ -533,6 +545,8 @@ input::-webkit-scrollbar { display: none; }
 .quick-fill-btn:hover { border-color: var(--accent-1); background: rgba(212,160,192,0.1); color: var(--text-primary); }
 .save-btn { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--accent-gradient); color: #fff; font-size: 15px; font-family: inherit; font-weight: 500; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 4px 20px rgba(212,160,192,0.35); transition: box-shadow var(--transition-fast), transform 0.15s; margin-top: 8px; }
 .save-btn:active { transform: scale(0.98); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ========== TOAST ========== */
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(90,58,74,0.9); color: #fff; font-size: 13px; padding: 10px 22px; border-radius: 20px; z-index: 999; backdrop-filter: blur(8px); opacity: 0; transition: opacity var(--transition-normal), transform var(--transition-normal); pointer-events: none; }
