@@ -4,14 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>十四行诗</title>
-<!-- CDN 库：成熟开源方案，减少手搓代码 -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-theme">
 <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
-<!-- ========== INTRO / ONBOARDING ========== -->
-<div id="intro-screen" class="screen active">
+<div id="intro-screen">
   <div class="intro-bg-pattern"></div>
   <div class="intro-top-nav" id="intro-nav">
     <button id="intro-back" class="intro-nav-btn" aria-label="返回">
@@ -38,8 +36,8 @@
     <div class="intro-slide" data-step="2">
       <div class="intro-slide-inner">
         <div class="intro-icon"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
-        <h2 class="intro-title">智能模型 + 流式响应</h2>
-        <p class="intro-desc">DeepSeek、Claude、GPT……<br>实时流式输出，所见即所得</p>
+        <h2 class="intro-title">多模型支持</h2>
+        <p class="intro-desc">DeepSeek、OpenAI 一键切换<br>也可用自定义中转站地址</p>
       </div>
     </div>
     <div class="intro-slide" data-step="3">
@@ -64,9 +62,7 @@
   </div>
 </div>
 
-<!-- ========== MAIN LAYOUT: SIDEBAR + CHAT ========== -->
 <div id="app-layout">
-  <!-- ===== SIDEBAR ===== -->
   <aside id="sidebar">
     <div class="sidebar-header">
       <button id="sidebar-new-chat" class="sidebar-btn primary" title="新建对话">✚ 新对话</button>
@@ -82,8 +78,7 @@
     </div>
   </aside>
 
-  <!-- ===== CHAT SCREEN ===== -->
-  <div id="chat-screen" class="screen active">
+  <div id="chat-screen">
     <div class="chat-watermark" aria-hidden="true"></div>
     <div class="chat-bg-pattern"></div>
     <div id="chat-topbar">
@@ -93,7 +88,7 @@
     </div>
     <div id="chat-messages">
       <div class="chat-hero" data-keep>
-        <div class="hero-brand">CLAUDE OPUS · 十四行诗</div>
+        <div class="hero-brand">SONNET · 十四行诗</div>
         <h1 class="hero-title">✦ Sonnet ✦</h1>
         <div class="hero-divider"></div>
         <p class="hero-subtitle">说人话就好，宝宝 ✦</p>
@@ -122,8 +117,7 @@
   </div>
 </div>
 
-<!-- ========== SETTINGS SCREEN ========== -->
-<div id="settings-screen" class="screen">
+<div id="settings-screen">
   <div class="chat-bg-pattern"></div>
   <div id="settings-header">
     <button id="settings-back" class="header-btn">←</button>
@@ -135,15 +129,25 @@
       <div class="section-title">API 配置</div>
       <label class="field-label">API Key</label>
       <input type="password" id="s-api-key" class="field-input" placeholder="输入你的 API Key">
+      
+      <label class="field-label">服务商</label>
+      <select id="s-provider" class="field-input">
+        <option value="deepseek">DeepSeek</option>
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="custom">自定义 / 中转站</option>
+      </select>
+      
       <label class="field-label">API 地址</label>
-      <input type="text" id="s-api-url" class="field-input" placeholder="例如 https://api.deepseek.com/v1">
+      <input type="text" id="s-api-url" class="field-input" placeholder="选择服务商后自动填写">
       <label class="field-label">模型</label>
       <input type="text" id="s-model" class="field-input" placeholder="输入模型名称">
-      <div class="model-quick-fill">
-        <button class="quick-fill-btn" data-model="deepseek-chat">deepseek-chat</button>
-        <button class="quick-fill-btn" data-model="deepseek-v4-flash">deepseek-v4-flash</button>
-        <button class="quick-fill-btn" data-model="gpt-4o">gpt-4o</button>
-        <button class="quick-fill-btn" data-model="claude-3.5-sonnet">claude-3.5-sonnet</button>
+      <div class="model-quick-fill" id="model-presets">
+        <button class="quick-fill-btn" data-provider="deepseek" data-model="deepseek-chat" data-url="https://api.deepseek.com/v1">deepseek-chat</button>
+        <button class="quick-fill-btn" data-provider="deepseek" data-model="deepseek-v4-flash" data-url="https://api.deepseek.com/v1">deepseek-v4-flash</button>
+        <button class="quick-fill-btn" data-provider="openai" data-model="gpt-4o" data-url="https://api.openai.com/v1">gpt-4o</button>
+        <button class="quick-fill-btn" data-provider="openai" data-model="gpt-4o-mini" data-url="https://api.openai.com/v1">gpt-4o-mini</button>
+        <button class="quick-fill-btn" data-provider="custom" data-model="" data-url="">自定义</button>
       </div>
     </div>
     <div class="section">
@@ -163,10 +167,9 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<!-- CDN 库（成熟方案，减少手搓代码） -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.0/purify.min.js"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
