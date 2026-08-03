@@ -23,26 +23,30 @@ jobs:
         with:
           api-level: 34
           build-tools: 34.0.0
-          ndk: false
 
-      - name: Install pwabuilder
-        run: npm install -g @pwabuilder/cli
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Generate APK with pwabuilder
+      - name: Build with Capacitor
         run: |
-          npx pwabuilder package --platform android --project . --output ./apk-output 2>&1 || true
-          ls -la ./apk-output/ 2>/dev/null || echo "No pwabuilder output"
-
-      - name: Alternative - use bubblewrap
-        if: failure()
-        run: |
-          npm install -g @bubblewrap/cli
-          npx bubblewrap init --manifest "" --directory ./apk-output 2>&1 || true
-          ls -la ./apk-output/ 2>/dev/null || echo "No bubblewrap output"
+          mkdir -p www
+          cp index.html www/
+          mkdir -p www/css www/js
+          cp css/style.css www/css/
+          cp js/app.js www/js/
+          npm init -y
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+          npx cap init "Sonnet" "com.sonnet.app" --web-dir ./www
+          npx cap add android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -100
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: sonnet-apk
-          path: apk-output/
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
