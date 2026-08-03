@@ -6,7 +6,6 @@
 
 /* ---------- CSS Variables (主题系统) ---------- */
 :root {
-  /* 浅色主题（默认） */
   --bg-primary: #fdf6f0;
   --bg-secondary: #fce8e8;
   --bg-tertiary: #f0e8f5;
@@ -41,7 +40,6 @@
   --transition-slow: 0.5s;
 }
 
-/* 暗色主题 */
 [data-theme="dark"] {
   --bg-primary: #1a1420;
   --bg-secondary: #2a1a2a;
@@ -67,7 +65,6 @@
   --sidebar-bg: rgba(30,20,35,0.92);
 }
 
-/* ---------- Reset & Base ---------- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
@@ -84,23 +81,17 @@ textarea::placeholder { color: var(--text-faint); }
 textarea::-webkit-scrollbar { display: none; }
 input::-webkit-scrollbar { display: none; }
 
-/* ---------- Screen System ---------- */
-.screen {
-  position: fixed;
-  inset: 0;
-  display: none;
-  flex-direction: column;
-  opacity: 0;
-  transition: opacity var(--transition-slow);
-}
-.screen.active {
-  display: flex;
-  opacity: 1;
-}
-
 /* ========== INTRO ========== */
 #intro-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(160deg, var(--bg-primary) 0%, var(--bg-secondary) 35%, var(--bg-tertiary) 100%);
+}
+#intro-screen.hidden {
+  display: none;
 }
 .intro-bg-pattern {
   position: absolute; inset: 0;
@@ -258,12 +249,15 @@ input::-webkit-scrollbar { display: none; }
   letter-spacing: 0.04em; transition: opacity 0.3s 0.1s, max-width 0.3s;
 }
 
-/* ========== APP LAYOUT ========== */
+/* ========== APP LAYOUT (hidden by default, shown after intro) ========== */
 #app-layout {
   position: fixed;
   inset: 0;
-  display: flex;
+  display: none;
   z-index: 1;
+}
+#app-layout.visible {
+  display: flex;
 }
 
 /* ========== SIDEBAR ========== */
@@ -438,7 +432,6 @@ input::-webkit-scrollbar { display: none; }
     radial-gradient(circle at 85% 80%, rgba(180,140,200,0.05) 0%, transparent 50%);
 }
 
-/* Chat topbar */
 #chat-topbar {
   position: relative;
   z-index: 15;
@@ -471,7 +464,6 @@ input::-webkit-scrollbar { display: none; }
   letter-spacing: 0.04em;
 }
 
-/* Messages area */
 #chat-messages {
   flex: 1;
   position: relative; z-index: 5;
@@ -543,7 +535,6 @@ input::-webkit-scrollbar { display: none; }
 .welcome-emoji { font-size: 14px; color: var(--text-muted); margin-bottom: 14px; letter-spacing: 0.05em; }
 .welcome-text { font-size: 14px; color: var(--text-secondary); line-height: 2.2; font-style: italic; }
 
-/* Message rows */
 .msg-row {
   display: flex;
   align-items: flex-end;
@@ -618,7 +609,6 @@ input::-webkit-scrollbar { display: none; }
   box-shadow: 0 2px 12px rgba(212,160,192,0.3);
 }
 
-/* Markdown 格式化内容 */
 .bot-msg p { margin-bottom: 8px; }
 .bot-msg p:last-child { margin-bottom: 0; }
 .bot-msg ul, .bot-msg ol { padding-left: 20px; margin-bottom: 8px; }
@@ -668,7 +658,6 @@ input::-webkit-scrollbar { display: none; }
   line-height: 1.5;
 }
 
-/* Loading dots */
 .typing-indicator {
   display: flex;
   gap: 6px;
@@ -688,7 +677,6 @@ input::-webkit-scrollbar { display: none; }
   50%     { opacity: 1;   transform: scale(1.1); }
 }
 
-/* Stream status bar */
 .stream-status {
   display: flex;
   align-items: center;
@@ -717,7 +705,6 @@ input::-webkit-scrollbar { display: none; }
 }
 .stream-stop-btn:active { background: rgba(224,96,96,0.2); }
 
-/* Input bar */
 #input-bar {
   position: relative; z-index: 10;
   padding: 4px 16px calc(env(safe-area-inset-bottom, 8px) + 16px);
@@ -776,9 +763,17 @@ input::-webkit-scrollbar { display: none; }
   letter-spacing: 0.04em;
 }
 
-/* ========== SETTINGS ========== */
+/* ========== SETTINGS (overlay, position:fixed) ========== */
 #settings-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  flex-direction: column;
   background: linear-gradient(160deg, var(--bg-primary) 0%, var(--bg-secondary) 35%, var(--bg-tertiary) 100%);
+}
+#settings-screen.active {
+  display: flex;
 }
 #settings-header {
   position: relative; z-index: 10;
@@ -914,29 +909,6 @@ input::-webkit-scrollbar { display: none; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ========== SCREEN TRANSITIONS ========== */
-.screen.slide-in-right { animation: slideInRight 0.45s cubic-bezier(0.4,0,0.2,1) forwards; }
-.screen.slide-out-left { animation: slideOutLeft 0.45s cubic-bezier(0.4,0,0.2,1) forwards; }
-.screen.slide-in-left { animation: slideInLeft 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
-.screen.slide-out-right { animation: slideOutRight 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
-
-@keyframes slideInRight {
-  from { display: flex; opacity: 0; transform: translateX(40px); }
-  to   { display: flex; opacity: 1; transform: translateX(0); }
-}
-@keyframes slideOutLeft {
-  from { opacity: 1; transform: translateX(0); }
-  to   { opacity: 0; transform: translateX(-40px); }
-}
-@keyframes slideInLeft {
-  from { display: flex; opacity: 0; transform: translateX(-40px); }
-  to   { display: flex; opacity: 1; transform: translateX(0); }
-}
-@keyframes slideOutRight {
-  from { opacity: 1; transform: translateX(0); }
-  to   { opacity: 0; transform: translateX(40px); }
-}
-
 /* ========== RESPONSIVE ========== */
 @media (max-width: 640px) {
   #sidebar { position: fixed; left: 0; top: 0; height: 100%; z-index: 50; box-shadow: var(--shadow-lg); }
@@ -946,6 +918,5 @@ input::-webkit-scrollbar { display: none; }
   .quick-fill-btn { font-size: 10px; min-width: 60px; }
 }
 
-/* ========== UTILITIES ========== */
 .hidden { display: none !important; }
 .no-select { user-select: none; -webkit-user-select: none; }
