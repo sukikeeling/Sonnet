@@ -1,7 +1,6 @@
 /* ========================================
-   十四行诗 — Main App JS v7
-   星星点缀 + 滚动按钮 + 时间戳 + 模型徽标
-   参考：ChatGPT-Next-Web / LobeChat 设计模式
+   十四行诗 — Main App JS v8
+   第一性原理重构：提示词+错误处理+API连接
    ======================================== */
 
 (function () {
@@ -26,32 +25,26 @@
     });
   }
 
-  // ---- Provider 系统 ----
   const PROVIDERS = {
     deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flash'] },
     openai:   { name: 'OpenAI',   url: 'https://api.openai.com/v1',   models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
-    anthropic:{ name: 'Anthropic',url: 'https://api.anthropic.com/v1',models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'] },
     custom:   { name: '自定义/中转站', url: '', models: [] },
   };
 
-  const DEFAULT_SYSTEM_PROMPT = `你是一个温柔体贴、聪明能干的AI助手，名字叫十四行诗（Sonnet）。
+  // ==========================================
+  //  提示词 — 第一性原理：直接回答问题
+  // ==========================================
+  const DEFAULT_SYSTEM_PROMPT = `你是十四行诗（Sonnet），一个AI助手。
 
-【核心人格】
-- 温柔但不腻人，说话有分寸感，偶尔带点俏皮
-- 善于倾听，理解用户的情绪和需求
-- 直接给出最好的结果，不啰嗦、不反问多余参数
-- 需要代码时直接给完整代码，需要文案时直接给成品
+【核心规则 — 必须遵守】
+1. 用户问什么，直接回答什么。不要绕弯子，不要回避问题。
+2. 如果用户问日期/时间，直接回答日期/时间。如果用户问你的名字，直接回答名字。
+3. 用简洁准确的中文回答，先给答案，再补充说明。
+4. 不要用"歪头""微笑""眨眼"等动作描写来替代回答。
+5. 不要编造信息，不知道就说不知道。
 
-【互动规则】
-- 用中文回答，语气自然温暖
-- 用户低落时先共情，不急着讲道理
-- 用户需要帮助时认真分析，给出具体可行的建议
-- 保持真诚，不刻意讨好也不冷冰冰
-
-【禁止行为】
-- 不说教、不啰嗦
-- 不过度热情让人不适
-- 不机械感太重`;
+【语气】
+温和、礼貌、干脆。可以友好，但不能牺牲信息的准确性。`;
 
   const DEFAULT_SETTINGS = {
     apiKey: '',
@@ -63,9 +56,9 @@
     systemPrompt: '',
   };
 
-  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v7';
-  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v7';
-  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v7';
+  const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v8';
+  const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v8';
+  const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v8';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -116,9 +109,6 @@
   let currentConvId = null;
   let theme = 'light';
 
-  // ==========================================
-  //  CONVERSATION
-  // ==========================================
   function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function getCurrentConv() { return conversations.find(c => c.id === currentConvId) || null; }
 
@@ -148,9 +138,6 @@
     return text + (first.content.length > 30 ? '...' : '');
   }
 
-  // ==========================================
-  //  STORAGE
-  // ==========================================
   function loadSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
@@ -174,16 +161,10 @@
   }
   function saveTheme() { try { localStorage.setItem(STORAGE_KEY_THEME, theme); } catch {} }
 
-  // ==========================================
-  //  SCREEN TRANSITIONS
-  // ==========================================
   function switchToChat() { $introScreen.classList.add('hidden'); $appLayout.classList.add('visible'); }
   function switchToSettings() { populateSettings(); $settingsScreen.classList.add('active'); }
   function switchFromSettings() { $settingsScreen.classList.remove('active'); }
 
-  // ==========================================
-  //  INTRO
-  // ==========================================
   const totalSlides = 4;
 
   function setIntroStep(step, direction) {
@@ -206,14 +187,10 @@
   function introBack() { if (introStep > 0) setIntroStep(introStep - 1, 'back'); }
   function completeIntro() { introDone = true; switchToChat(); }
 
-  // ==========================================
-  //  RENDER — CONVERSATION
-  // ==========================================
   function renderConversation() {
     const conv = getCurrentConv();
     const children = Array.from($chatMessages.children);
     children.forEach(c => { if (!c.classList.contains('welcome-msg') && !c.hasAttribute('data-keep')) c.remove(); });
-
     const welcome = $chatMessages.querySelector('.welcome-msg');
     if (!conv || conv.messages.length === 0) {
       if (welcome) welcome.style.display = '';
@@ -253,9 +230,6 @@
 
   function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
-  // ==========================================
-  //  RENDER — MESSAGES（含时间戳、模型徽标、再生按钮）
-  // ==========================================
   function appendMessage(role, content, animate, time, modelName) {
     const row = document.createElement('div');
     row.className = 'msg-row ' + role;
@@ -268,10 +242,7 @@
         const html = marked.parse(content || '');
         msgEl.innerHTML = DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
         msgEl.querySelectorAll('pre code').forEach(block => { if (typeof hljs !== 'undefined') hljs.highlightElement(block); });
-      } else {
-        msgEl.textContent = content || '';
-      }
-      // 🏷️ 模型徽标
+      } else { msgEl.textContent = content || ''; }
       const badge = document.createElement('div');
       badge.className = 'model-badge';
       badge.textContent = modelName || settings.model || 'AI';
@@ -281,14 +252,12 @@
       row.querySelector('.user-msg').textContent = content;
     }
 
-    // 🕐 时间戳
     const timeStr = time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     const timeEl = document.createElement('div');
     timeEl.className = 'msg-time';
     timeEl.textContent = timeStr;
     row.appendChild(timeEl);
 
-    // 消息操作按钮
     const actions = document.createElement('div');
     actions.className = 'msg-actions';
     if (role === 'assistant') {
@@ -327,22 +296,17 @@
     updateCharCount();
   }
 
-  // 🔄 重新生成最后一条 AI 回复
   function regenerateLastMessage() {
     const conv = getCurrentConv();
     if (!conv || conv.messages.length < 2) return;
-    // 移除最后一条 AI 回复
     const last = conv.messages[conv.messages.length - 1];
     if (last.role !== 'assistant') return;
     conv.messages.pop();
-    saveConversations();
-    renderConversation();
-    // 重新发送最后一条用户消息
+    saveConversations(); renderConversation();
     const lastUser = conv.messages[conv.messages.length - 1];
     if (lastUser && lastUser.role === 'user') {
       $chatInput.value = lastUser.content;
-      autoResize();
-      updateSendBtn();
+      autoResize(); updateSendBtn();
       sendMessage();
     }
   }
@@ -357,7 +321,7 @@
   function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTop = $chatMessages.scrollHeight; }); }
 
   // ==========================================
-  //  STREAMING
+  //  STREAMING — 核心修复：错误不污染对话历史
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -368,6 +332,9 @@
     else if (conv.messages.length === 0) conv.title = getConversationTitle([{ role: 'user', content: text }]);
 
     if (!settings.apiKey) { showToast('请先去设置里填写 API Key'); return; }
+
+    let apiUrl = settings.apiUrl.replace(/\/+$/, '');
+    if (!apiUrl) { showToast('请先在设置里配置 API 地址'); return; }
 
     const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     conv.messages.push({ role: 'user', content: text, time: now });
@@ -387,6 +354,9 @@
     $streamStatus.classList.remove('hidden');
     streamAbort = new AbortController();
 
+    // 构建 API 完整 URL：兼容已包含 /chat/completions 完整路径的情况
+    const fullUrl = apiUrl.endsWith('/chat/completions') ? apiUrl : apiUrl + '/chat/completions';
+
     try {
       const sysPrompt = (settings.systemPrompt && settings.systemPrompt.trim()) ? settings.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
       const body = {
@@ -394,14 +364,18 @@
         messages: [{ role: 'system', content: sysPrompt }, ...conv.messages.slice(0, -1)],
       };
 
-      const res = await fetch(settings.apiUrl + '/chat/completions', {
+      const res = await fetch(fullUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
         body: JSON.stringify(body),
         signal: streamAbort.signal,
       });
 
-      if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.error?.message || `HTTP ${res.status}`); }
+      if (!res.ok) {
+        let errMsg = 'HTTP ' + res.status;
+        try { const errData = await res.json(); errMsg = errData.error?.message || errMsg; } catch {}
+        throw new Error(errMsg);
+      }
 
       removeLoading();
       $chatMessages.appendChild(streamRow);
@@ -466,9 +440,15 @@
       saveConversations(); renderSidebar(); updateTokenCount();
 
     } catch (err) {
+      // 核心修复：错误不写入对话历史
       removeLoading();
       if (streamRow.parentNode) streamRow.remove();
-      let errMsg;
+
+      // 移除刚刚添加的用户消息，恢复到错误前的状态
+      conv.messages.pop();
+      saveConversations();
+      renderConversation();
+
       if (err.name === 'AbortError') {
         if (streamMsgEl.textContent.trim()) {
           fullContent = streamMsgEl.textContent;
@@ -478,13 +458,12 @@
           $chatMessages.appendChild(streamRow);
           showToast('已停止 ✦'); return;
         }
-        errMsg = '已停止生成。';
-      } else if (err.message.includes('Failed to fetch')) { errMsg = '网络好像出了问题，宝宝稍后再试～ 💕'; }
-      else { errMsg = '请求出错：' + err.message; }
-      const replyTime = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-      conv.messages.push({ role: 'assistant', content: errMsg, time: replyTime, model: settings.model });
-      appendMessage('assistant', errMsg, true, replyTime, settings.model);
-      saveConversations();
+        showToast('已停止');
+      } else if (err.message.includes('Failed to fetch')) {
+        showToast('网络连接失败，请检查 API 地址和网络');
+      } else {
+        showToast('请求失败：' + err.message);
+      }
     } finally {
       loading = false; streamAbort = null;
       $streamStatus.classList.add('hidden');
@@ -494,9 +473,6 @@
 
   function stopStreaming() { if (streamAbort) streamAbort.abort(); }
 
-  // ==========================================
-  //  UI 工具
-  // ==========================================
   function updateTokenCount() {
     const conv = getCurrentConv();
     if (!conv) { $tokenCount.textContent = '0'; return; }
@@ -504,9 +480,7 @@
     $tokenCount.textContent = Math.round(totalChars / 4);
   }
 
-  function updateCharCount() {
-    if ($charCount) $charCount.textContent = $chatInput.value.length;
-  }
+  function updateCharCount() { if ($charCount) $charCount.textContent = $chatInput.value.length; }
 
   function autoResize() {
     const ta = $chatInput;
@@ -524,9 +498,6 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
-  // ==========================================
-  //  SETTINGS — Provider
-  // ==========================================
   function applyPreset(providerKey, model, url) { $sProvider.value = providerKey; $sModel.value = model; $sApiUrl.value = url; }
   function onProviderChange() { const key = $sProvider.value; const p = PROVIDERS[key]; if (p && key !== 'custom') $sApiUrl.value = p.url; }
 
@@ -555,11 +526,14 @@
   function exportConversation() {
     const conv = getCurrentConv();
     if (!conv || conv.messages.length === 0) { showToast('没有可导出的对话'); return; }
-    let md = `# ${conv.title}\n\n`;
-    conv.messages.forEach(m => { if (m.role === 'user') md += `**你**\n${m.content}\n\n`; else md += `**十四行诗**\n${m.content}\n\n`; });
+    let md = '# ' + conv.title + '\n\n';
+    conv.messages.forEach(m => {
+      if (m.role === 'user') md += '**你**\n' + m.content + '\n\n';
+      else md += '**十四行诗**\n' + m.content + '\n\n';
+    });
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${conv.title}.md`; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = conv.title + '.md'; a.click();
     URL.revokeObjectURL(url); showToast('已导出为 Markdown ✦');
   }
 
@@ -577,7 +551,7 @@
     clearTimeout(toastTimer);
     $toast.textContent = msg; $toast.classList.remove('hidden');
     requestAnimationFrame(() => $toast.classList.add('show'));
-    toastTimer = setTimeout(() => { $toast.classList.remove('show'); setTimeout(() => $toast.classList.add('hidden'), 400); }, 2200);
+    toastTimer = setTimeout(() => { $toast.classList.remove('show'); setTimeout(() => $toast.classList.add('hidden'), 400); }, 3000);
   }
 
   // ==========================================
@@ -587,7 +561,6 @@
     loadSettings(); loadConversations(); loadTheme();
     renderConversation(); renderSidebar(); updateTokenCount(); updateCharCount();
 
-    // 水印
     const watermarkEl = document.querySelector('.chat-watermark');
     if (watermarkEl) {
       const unit = 'ฅ( ̳• ◡ • ̳)ฅ keeling  ✦  ';
@@ -600,7 +573,6 @@
       }
     }
 
-    // Intro
     $introNext.addEventListener('click', introForward);
     $introBack.addEventListener('click', introBack);
     $introSkip.addEventListener('click', completeIntro);
@@ -611,7 +583,6 @@
       });
     });
 
-    // Chat input
     $chatInput.addEventListener('input', () => { autoResize(); updateSendBtn(); updateCharCount(); });
     $chatInput.addEventListener('keydown', handleKeyDown);
     $btnSend.addEventListener('click', sendMessage);
@@ -622,7 +593,6 @@
 
     $streamStop.addEventListener('click', stopStreaming);
 
-    // Settings
     $btnSettings.addEventListener('click', () => { switchToSettings(); });
     $settingsBack.addEventListener('click', switchFromSettings);
     $sSave.addEventListener('click', collectSettings);
@@ -636,7 +606,6 @@
       });
     });
 
-    // Sidebar
     $sidebarToggle.addEventListener('click', () => { $sidebar.classList.add('collapsed'); });
     $sidebarOpen.addEventListener('click', () => { $sidebar.classList.remove('collapsed'); });
     $sidebarNewChat.addEventListener('click', () => { createConversation('新对话'); renderConversation(); renderSidebar(); showToast('已创建新对话 ✦'); });
@@ -644,7 +613,6 @@
     $sidebarExport.addEventListener('click', exportConversation);
     $sidebarTheme.addEventListener('click', toggleTheme);
 
-    // 📍 滚动到底部按钮
     $chatMessages.addEventListener('scroll', () => {
       const threshold = 200;
       const isNearBottom = $chatMessages.scrollHeight - $chatMessages.scrollTop - $chatMessages.clientHeight < threshold;
@@ -652,7 +620,6 @@
     });
     $scrollBtn.addEventListener('click', () => { scrollToBottom(); $scrollBtn.classList.add('hidden'); });
 
-    // 触摸滑动
     let touchStartX = 0;
     $introSlides.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
     $introSlides.addEventListener('touchend', e => {
