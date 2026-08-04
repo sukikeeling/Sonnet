@@ -1,5 +1,5 @@
 /* ========================================
-   十四行诗 — Main App JS v10
+   十四行诗 — Main App JS v12
    时间感知：每次请求注入当前时间
    ======================================== */
 
@@ -68,6 +68,7 @@
   const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v11';
   const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v11';
   const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v11';
+  const STORAGE_KEY_COLOR_STYLE = 'sonnet-keeling-color-v12';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -101,6 +102,7 @@
   const $sidebarSearch  = document.getElementById('sidebar-search-input');
   const $sidebarExport  = document.getElementById('sidebar-export');
   const $sidebarTheme   = document.getElementById('sidebar-theme');
+  const $themePicker    = document.getElementById('sidebar-theme-picker');
   const $topbarTitle    = document.getElementById('topbar-title');
   const $streamStatus   = document.getElementById('stream-status');
   const $streamStop     = document.getElementById('stream-stop');
@@ -117,6 +119,7 @@
   let conversations = [];
   let currentConvId = null;
   let theme = 'light';
+  let colorStyle = 'rose';
 
   function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function getCurrentConv() { return conversations.find(c => c.id === currentConvId) || null; }
@@ -190,7 +193,7 @@
     try { const saved = localStorage.getItem(STORAGE_KEY_THEME); if (saved === 'dark' || saved === 'light') theme = saved; } catch {}
     document.documentElement.setAttribute('data-theme', theme); updateThemeUI();
   }
-  function saveTheme() { try { localStorage.setItem(STORAGE_KEY_THEME, theme); } catch {} }
+  function saveTheme() { try { localStorage.setItem(STORAGE_KEY_THEME, theme); } catch {} try { localStorage.setItem(STORAGE_KEY_COLOR_STYLE, colorStyle); } catch {} }
 
   function switchToChat() { $introScreen.classList.add('hidden'); $appLayout.classList.add('visible'); }
   function switchToSettings() { populateSettings(); $settingsScreen.classList.add('active'); }
@@ -681,7 +684,10 @@
     showToast(theme === 'dark' ? '已切换为暗色模式 🌙' : '已切换为浅色模式 ☀️');
   }
 
-  function updateThemeUI() { if ($sidebarTheme) $sidebarTheme.textContent = theme === 'dark' ? '☀️ 浅色' : '🌙 暗色'; }
+  function updateThemeUI() {
+    if ($sidebarTheme) $sidebarTheme.textContent = theme === 'dark' ? '☀️ 浅色' : '🌙 暗色';
+    if ($themePicker) $themePicker.value = colorStyle;
+  }
 
   let toastTimer = null;
   function showToast(msg) {
@@ -748,6 +754,14 @@
     $sidebarSearch.addEventListener('input', renderSidebar);
     $sidebarExport.addEventListener('click', exportConversation);
     $sidebarTheme.addEventListener('click', toggleTheme);
+    if ($themePicker) {
+      $themePicker.addEventListener('change', function() {
+        colorStyle = this.value;
+        document.documentElement.setAttribute('data-color-style', colorStyle);
+        saveTheme();
+        showToast('已切换至 ' + this.options[this.selectedIndex].text);
+      });
+    }
 
     $chatMessages.addEventListener('scroll', () => {
       const threshold = 200;
