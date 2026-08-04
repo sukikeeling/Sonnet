@@ -406,7 +406,54 @@
   function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTop = $chatMessages.scrollHeight; }); }
 
   // ==========================================
-  //  STREAMING — 时间感知：每次请求注入当前时间
+  //  CACHE-AWARE MESSAGE BUILDER
+  //  借鉴 Reasonix prefix-preservation 策略：
+  //  - 保持 system prompt 和早期对话不变（KV-cache 前缀）
+  //  - 时间上下文注入到最后一条用户消息（不影响缓存前缀）
+  //  - 超长对话压缩中间轮次，保留头尾
+  // ==========================================
+  function buildCacheAwareMessages(sysPrompt, allMessages, timeContext) {
+    var MAX_PREFIX_PAIRS = 4;   // 保留前 N 轮作为缓存前缀
+    var MAX_SUFFIX_PAIRS = 4;   // 保留后 N 轮作为近期上下文
+    var COMPACT_THRESHOLD = 20; // 超过此消息数触发压缩
+
+    // 1. 始终以 system prompt 开头（稳定缓存前缀）
+    var result = [{ role: 'system', content: sysPrompt }];
+
+    // 2. 提取 role+content，移除 time/model 等展示字段
+    var history = allMessages.map(function(m) { return { role: m.role, content: m.content }; });
+    if (history.length === 0) return result;
+
+    // 3. 时间上下文注入到最后一条消息（用户最新输入）
+    //    关键：新消息本来就不在缓存中，加时间不影响缓存
+    var lastIdx = history.length - 1;
+    if (history[lastIdx].role === 'user') {
+      history[lastIdx].content = history[lastIdx].content + '\n\n(' + timeContext + ')';
+    } else {
+      history.push({ role: 'system', content: '(' + timeContext + ')' });
+    }
+
+    // 4. 超长对话压缩中间轮次，保留缓存前缀
+    if (history.length > COMPACT_THRESHOLD) {
+      var prefixCount = MAX_PREFIX_PAIRS * 2;
+      var suffixCount = MAX_SUFFIX_PAIRS * 2;
+      var prefix = history.slice(0, prefixCount);
+      var suffix = history.slice(-suffixCount);
+      var middle = history.slice(prefixCount, -suffixCount);
+      var middlePairs = Math.ceil(middle.length / 2);
+
+      result.push.apply(result, prefix);
+      result.push({ role: 'system', content: '📌 前情提要：中间 ' + middlePairs + ' 轮对话已压缩' });
+      result.push.apply(result, suffix);
+    } else {
+      result.push.apply(result, history);
+    }
+
+    return result;
+  }
+
+  // ==========================================
+  //  STREAMING
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -451,13 +498,9 @@
 
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
-        messages: [
-          { role: 'system', content: sysPrompt },
-          ...conv.messages,
-          { role: 'system', content: timeStr },
-        ],
-      };
+        messages: buildCacheAwareMessages(sysPrompt, conv.messages, timeStr),
 
+      };
       const res = await fetch(fullUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
@@ -789,3 +832,4 @@
     init();
   }
 })();
+

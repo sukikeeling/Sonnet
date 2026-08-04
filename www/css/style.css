@@ -344,13 +344,18 @@ input::-webkit-scrollbar { display: none; }
   display: flex; flex-direction: column;
 }
 .watermark-row {
-  white-space: nowrap; font-size: 12.5px;
-  color: rgba(212,160,192,0.05);
+  white-space: nowrap; font-size: 13px;
+  color: rgba(212,160,192,0.12);
   letter-spacing: 0.08em; line-height: 2.7em;
   animation: wmScroll 22s linear infinite;
   will-change: transform;
 }
 .watermark-row:nth-child(even) { animation-name: wmScrollR; animation-duration: 26s; }
+
+/* 暗色模式水印可见度 */
+[data-theme="dark"] .watermark-row {
+  color: rgba(180,140,160,0.18);
+}
 @keyframes wmScroll  { from { transform: translateX(0);   } to { transform: translateX(-50%); } }
 @keyframes wmScrollR { from { transform: translateX(-50%); } to { transform: translateX(0);   } }
 
