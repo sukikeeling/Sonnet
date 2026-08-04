@@ -1,0 +1,28 @@
+# === 凭证和安全 ===
+.env
+.env.local
+.env.*.local
+*.keystore
+*.jks
+*.p12
+*.pfx
+secrets/
+
+# === 依赖 ===
+node_modules/
+.cache/
+
+# === 构建输出 ===
+apk/
+*.apk
+*.aab
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === 系统 ===
+.DS_Store
+Thumbs.db
