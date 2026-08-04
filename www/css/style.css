@@ -100,9 +100,10 @@ input::-webkit-scrollbar { display: none; }
   pointer-events: none; z-index: 1;
   overflow: hidden;
 }
-.intro-stars::before, .intro-stars::after {
+.intro-stars::before {
   content: '✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧';
   position: absolute;
+  top: 0;
   font-size: 14px;
   color: rgba(212,160,192,0.15);
   letter-spacing: 1.5em;
@@ -110,19 +111,16 @@ input::-webkit-scrollbar { display: none; }
   animation: starFloat 20s linear infinite;
 }
 .intro-stars::after {
+  content: '✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦';
+  position: absolute;
   top: 40%;
   font-size: 10px;
   color: rgba(212,160,192,0.1);
-  animation-duration: 28s;
+  letter-spacing: 2em;
+  white-space: nowrap;
+  animation: starFloat 28s linear infinite;
   animation-delay: -10s;
 }
-@keyframes starFloat {
-  0% { transform: translateY(-10%) rotate(0deg); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
-}
-
 .intro-bg-pattern {
   position: absolute; inset: 0;
   pointer-events: none; z-index: 0;
@@ -958,6 +956,32 @@ input::-webkit-scrollbar { display: none; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+
+
+/* ========== 星星点击绽放 ========== */
+.star-burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+  animation: burstOut 0.8s cubic-bezier(0.2,0,0.4,1) forwards;
+}
+@keyframes burstOut {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.5) rotate(180deg); opacity: 0.8; }
+  100% { transform: scale(2.5) rotate(360deg); opacity: 0; }
+}
+.star-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 998;
+  font-size: 10px;
+  animation: particleFly 1s cubic-bezier(0.2,0,0.6,1) forwards;
+}
+@keyframes particleFly {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* ========== TOAST ========== */
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(90,58,74,0.9); color: #fff; font-size: 13px; padding: 10px 22px; border-radius: 20px; z-index: 999; backdrop-filter: blur(8px); opacity: 0; transition: opacity var(--transition-normal), transform var(--transition-normal); pointer-events: none; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -973,6 +997,8 @@ input::-webkit-scrollbar { display: none; }
 
 .hidden { display: none !important; }
 .no-select { user-select: none; -webkit-user-select: none; }
+
+
 
 
 
