@@ -1,5 +1,5 @@
 /* ========================================
-   十四行诗 — Main App JS v10
+   十四行诗 — Main App JS v12
    时间感知：每次请求注入当前时间
    ======================================== */
 
@@ -68,6 +68,7 @@
   const STORAGE_KEY_CONVERSATIONS = 'sonnet-keeling-conversations-v11';
   const STORAGE_KEY_SETTINGS = 'sonnet-keeling-settings-v11';
   const STORAGE_KEY_THEME = 'sonnet-keeling-theme-v11';
+  const STORAGE_KEY_COLOR_STYLE = 'sonnet-keeling-color-v12';
 
   const $introScreen    = document.getElementById('intro-screen');
   const $appLayout      = document.getElementById('app-layout');
@@ -101,6 +102,12 @@
   const $sidebarSearch  = document.getElementById('sidebar-search-input');
   const $sidebarExport  = document.getElementById('sidebar-export');
   const $sidebarTheme   = document.getElementById('sidebar-theme');
+  const $themeSelector  = document.getElementById('theme-selector');
+  const $themeCurrent  = document.getElementById('theme-current');
+  const $themePanel    = document.getElementById('theme-panel');
+  const $themeOptions  = $themePanel ? $themePanel.querySelectorAll('.theme-option') : [];
+  const $themeIcon     = $themeCurrent ? $themeCurrent.querySelector('.theme-current-icon') : null;
+  const $themeLabel    = $themeCurrent ? $themeCurrent.querySelector('.theme-current-label') : null;
   const $topbarTitle    = document.getElementById('topbar-title');
   const $streamStatus   = document.getElementById('stream-status');
   const $streamStop     = document.getElementById('stream-stop');
@@ -117,6 +124,7 @@
   let conversations = [];
   let currentConvId = null;
   let theme = 'light';
+  let colorStyle = 'rose';
 
   function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function getCurrentConv() { return conversations.find(c => c.id === currentConvId) || null; }
@@ -190,7 +198,7 @@
     try { const saved = localStorage.getItem(STORAGE_KEY_THEME); if (saved === 'dark' || saved === 'light') theme = saved; } catch {}
     document.documentElement.setAttribute('data-theme', theme); updateThemeUI();
   }
-  function saveTheme() { try { localStorage.setItem(STORAGE_KEY_THEME, theme); } catch {} }
+  function saveTheme() { try { localStorage.setItem(STORAGE_KEY_THEME, theme); } catch {} try { localStorage.setItem(STORAGE_KEY_COLOR_STYLE, colorStyle); } catch {} }
 
   function switchToChat() { $introScreen.classList.add('hidden'); $appLayout.classList.add('visible'); }
   function switchToSettings() { populateSettings(); $settingsScreen.classList.add('active'); }
@@ -406,7 +414,54 @@
   function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTop = $chatMessages.scrollHeight; }); }
 
   // ==========================================
-  //  STREAMING — 时间感知：每次请求注入当前时间
+  //  CACHE-AWARE MESSAGE BUILDER
+  //  借鉴 Reasonix prefix-preservation 策略：
+  //  - 保持 system prompt 和早期对话不变（KV-cache 前缀）
+  //  - 时间上下文注入到最后一条用户消息（不影响缓存前缀）
+  //  - 超长对话压缩中间轮次，保留头尾
+  // ==========================================
+  function buildCacheAwareMessages(sysPrompt, allMessages, timeContext) {
+    var MAX_PREFIX_PAIRS = 4;   // 保留前 N 轮作为缓存前缀
+    var MAX_SUFFIX_PAIRS = 4;   // 保留后 N 轮作为近期上下文
+    var COMPACT_THRESHOLD = 20; // 超过此消息数触发压缩
+
+    // 1. 始终以 system prompt 开头（稳定缓存前缀）
+    var result = [{ role: 'system', content: sysPrompt }];
+
+    // 2. 提取 role+content，移除 time/model 等展示字段
+    var history = allMessages.map(function(m) { return { role: m.role, content: m.content }; });
+    if (history.length === 0) return result;
+
+    // 3. 时间上下文注入到最后一条消息（用户最新输入）
+    //    关键：新消息本来就不在缓存中，加时间不影响缓存
+    var lastIdx = history.length - 1;
+    if (history[lastIdx].role === 'user') {
+      history[lastIdx].content = history[lastIdx].content + '\n\n(' + timeContext + ')';
+    } else {
+      history.push({ role: 'system', content: '(' + timeContext + ')' });
+    }
+
+    // 4. 超长对话压缩中间轮次，保留缓存前缀
+    if (history.length > COMPACT_THRESHOLD) {
+      var prefixCount = MAX_PREFIX_PAIRS * 2;
+      var suffixCount = MAX_SUFFIX_PAIRS * 2;
+      var prefix = history.slice(0, prefixCount);
+      var suffix = history.slice(-suffixCount);
+      var middle = history.slice(prefixCount, -suffixCount);
+      var middlePairs = Math.ceil(middle.length / 2);
+
+      result.push.apply(result, prefix);
+      result.push({ role: 'system', content: '📌 前情提要：中间 ' + middlePairs + ' 轮对话已压缩' });
+      result.push.apply(result, suffix);
+    } else {
+      result.push.apply(result, history);
+    }
+
+    return result;
+  }
+
+  // ==========================================
+  //  STREAMING
   // ==========================================
   async function sendMessage() {
     const text = $chatInput.value.trim();
@@ -451,13 +506,9 @@
 
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
-        messages: [
-          { role: 'system', content: sysPrompt },
-          ...conv.messages,
-          { role: 'system', content: timeStr },
-        ],
-      };
+        messages: buildCacheAwareMessages(sysPrompt, conv.messages, timeStr),
 
+      };
       const res = await fetch(fullUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
@@ -638,7 +689,19 @@
     showToast(theme === 'dark' ? '已切换为暗色模式 🌙' : '已切换为浅色模式 ☀️');
   }
 
-  function updateThemeUI() { if ($sidebarTheme) $sidebarTheme.textContent = theme === 'dark' ? '☀️ 浅色' : '🌙 暗色'; }
+  function updateThemeUI() {
+    if ($sidebarTheme) $sidebarTheme.textContent = theme === 'dark' ? '☀️ 浅色' : '🌙 暗色';
+    // 更新嵌入式主题选择器
+    if ($themeOptions && $themeOptions.length > 0) {
+      const selected = Array.from($themeOptions).find(o => o.dataset.color === colorStyle);
+      if (selected) {
+        $themeOptions.forEach(o => o.classList.remove('active'));
+        selected.classList.add('active');
+        if ($themeIcon) $themeIcon.textContent = selected.textContent.trim().charAt(0);
+        if ($themeLabel) $themeLabel.textContent = selected.textContent.trim().substring(2);
+      }
+    }
+  }
 
   let toastTimer = null;
   function showToast(msg) {
@@ -646,6 +709,64 @@
     $toast.textContent = msg; $toast.classList.remove('hidden');
     requestAnimationFrame(() => $toast.classList.add('show'));
     toastTimer = setTimeout(() => { $toast.classList.remove('show'); setTimeout(() => $toast.classList.add('hidden'), 400); }, 3000);
+  }
+
+
+  // ==========================================
+  //  星星点击绽放
+  // ==========================================
+  function createStarBurst(x, y) {
+    var stars = ['✦', '✧', '✦', '✧', '✦'];
+    var colors = ['rgba(212,160,192,0.8)', 'rgba(232,180,192,0.7)', 'rgba(200,160,220,0.7)', 'rgba(180,140,200,0.6)'];
+    
+    // 中心大星星
+    var main = document.createElement('div');
+    main.className = 'star-burst';
+    main.textContent = '✦';
+    main.style.left = (x - 20) + 'px';
+    main.style.top = (y - 20) + 'px';
+    main.style.fontSize = '40px';
+    main.style.color = colors[Math.floor(Math.random() * colors.length)];
+    document.body.appendChild(main);
+    setTimeout(function() { main.remove(); }, 800);
+    
+    // 散射小星星粒子
+    for (var i = 0; i < 12; i++) {
+      (function(idx) {
+        var p = document.createElement('div');
+        p.className = 'star-particle';
+        p.textContent = stars[idx % stars.length];
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        p.style.color = colors[Math.floor(Math.random() * colors.length)];
+        var angle = (idx / 12) * Math.PI * 2;
+        var dist = 40 + Math.random() * 60;
+        var dx = Math.cos(angle) * dist;
+        var dy = Math.sin(angle) * dist;
+        p.style.animation = 'particleFly 1s cubic-bezier(0.2,0,0.6,1) forwards';
+        p.style.setProperty('--dx', dx + 'px');
+        p.style.setProperty('--dy', dy + 'px');
+        p.style.transform = 'translate(0,0)';
+        p.style.animation = 'none';
+        document.body.appendChild(p);
+        
+        // Force animation with JS
+        var tx = dx, ty = dy;
+        var start = performance.now();
+        function animate(now) {
+          var t = Math.min((now - start) / 1000, 1);
+          var ease = 1 - Math.pow(1 - t, 3);
+          var cx = tx * ease;
+          var cy = ty * ease - 40 * ease * ease;
+          var opacity = 1 - ease;
+          p.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
+          p.style.opacity = opacity;
+          if (t < 1) requestAnimationFrame(animate);
+          else p.remove();
+        }
+        setTimeout(function() { requestAnimationFrame(animate); }, Math.random() * 50);
+      })(i);
+    }
   }
 
   function init() {
@@ -667,6 +788,7 @@
     }
 
     $introNext.addEventListener('click', introForward);
+    $introSlides.addEventListener('click', function(e) { createStarBurst(e.clientX, e.clientY); });
     $introBack.addEventListener('click', introBack);
     $introSkip.addEventListener('click', completeIntro);
     document.querySelectorAll('.intro-dot').forEach(dot => {
@@ -688,6 +810,7 @@
 
     $btnSettings.addEventListener('click', () => { switchToSettings(); });
     $settingsBack.addEventListener('click', switchFromSettings);
+    document.getElementById('settings-screen').addEventListener('click', function(e) { createStarBurst(e.clientX, e.clientY)(e.clientX, e.clientY); });
     $sSave.addEventListener('click', collectSettings);
     $sTemperature.addEventListener('input', () => { $tempVal.textContent = $sTemperature.value; });
     $sProvider.addEventListener('change', onProviderChange);
@@ -705,6 +828,40 @@
     $sidebarSearch.addEventListener('input', renderSidebar);
     $sidebarExport.addEventListener('click', exportConversation);
     $sidebarTheme.addEventListener('click', toggleTheme);
+    // 嵌入式主题选择器事件
+    if ($themeCurrent) {
+      $themeCurrent.addEventListener('click', function(e) {
+        e.stopPropagation();
+        $themeSelector.classList.toggle('open');
+        $themeCurrent.setAttribute('aria-expanded', $themeSelector.classList.contains('open'));
+      });
+    }
+    if ($themeOptions && $themeOptions.length > 0) {
+      $themeOptions.forEach(function(opt) {
+        opt.addEventListener('click', function() {
+          const newColor = this.dataset.color;
+          if (newColor === colorStyle) { closeThemePanel(); return; }
+          colorStyle = newColor;
+          document.documentElement.setAttribute('data-color-style', colorStyle);
+          saveTheme();
+          updateThemeUI();
+          showToast('已切换至 ' + this.textContent.trim());
+          closeThemePanel();
+        });
+      });
+    }
+    // 点击外部关闭主题面板
+    document.addEventListener('click', function(e) {
+      if ($themeSelector && !$themeSelector.contains(e.target)) {
+        closeThemePanel();
+      }
+    });
+    function closeThemePanel() {
+      if ($themeSelector) {
+        $themeSelector.classList.remove('open');
+        if ($themeCurrent) $themeCurrent.setAttribute('aria-expanded', 'false');
+      }
+    }
 
     $chatMessages.addEventListener('scroll', () => {
       const threshold = 200;
@@ -712,6 +869,7 @@
       $scrollBtn.classList.toggle('hidden', isNearBottom);
     });
     $scrollBtn.addEventListener('click', () => { scrollToBottom(); $scrollBtn.classList.add('hidden'); });
+    $chatMessages.addEventListener('click', function(e) { createStarBurst(e.clientX, e.clientY); });
 
     let touchStartX = 0;
     $introSlides.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
@@ -788,4 +946,22 @@
   } else {
     init();
   }
+
+// ✨ 动态生成开屏星星粒子
+(function initStarParticles() {
+  const container = document.querySelector('.intro-stars');
+  if (!container) return;
+  for (let i = 0; i < 30; i++) {
+    const span = document.createElement('span');
+    const size = Math.random() * 2.5 + 1.5;
+    span.style.cssText = `left: ${Math.random() * 100}%; top: ${Math.random() * 100}%; width: ${size}px; height: ${size}px; animation-delay: ${Math.random() * 5}s; animation-duration: ${3 + Math.random() * 4}s;`;
+    container.appendChild(span);
+  }
 })();
+})();
+
+
+
+
+
+
