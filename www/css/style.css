@@ -93,6 +93,8 @@ input::-webkit-scrollbar { display: none; }
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, var(--bg-primary) 0%, var(--bg-secondary) 35%, var(--bg-tertiary) 100%);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 #intro-screen.hidden { display: none; }
 
@@ -208,6 +210,64 @@ input::-webkit-scrollbar { display: none; }
   --sidebar-bg: rgba(245,236,224,0.92);
   --watermark-color: rgba(176,112,72,0.12);
 }
+/* 🌠 流星雨 */
+.intro-shooting-stars {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 2;
+  overflow: hidden;
+}
+.shooting-star {
+  position: absolute;
+  width: 3px; height: 3px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 2px rgba(255,255,255,0.6), 0 0 20px 6px rgba(255,255,255,0.2);
+  animation: shoot 1.5s ease-out forwards;
+}
+.shooting-star::after {
+  content: '';
+  position: absolute;
+  top: 50%; right: 100%;
+  width: 80px; height: 1px;
+  background: linear-gradient(to left, rgba(255,255,255,0.8), transparent);
+  transform: translateY(-50%);
+}
+.shooting-star {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px 1px rgba(255,255,255,0.5), 0 0 12px 4px rgba(255,255,255,0.15);
+  animation: shoot var(--dur, 1.2s) ease-out forwards;
+  opacity: 0;
+}
+.shooting-star::after {
+  content: '';
+  position: absolute;
+  top: 50%; right: 100%;
+  width: 60px; height: 1px;
+  background: linear-gradient(to left, rgba(255,255,255,0.7), transparent);
+  transform: translateY(-50%);
+}
+.shooting-star.big {
+  width: 4px; height: 4px;
+  box-shadow: 0 0 6px 2px rgba(255,255,255,0.6), 0 0 20px 6px rgba(255,255,255,0.2);
+}
+.shooting-star.big::after { width: 100px; }
+@keyframes shoot {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(-250px, 250px) scale(0); opacity: 0; }
+}
+  70% { opacity: 1; }
+  100% { transform: translate(-200px, 200px) scale(0); opacity: 0; }
+}
+
+/* 刘海屏适配 */
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-left { padding-left: env(safe-area-inset-left, 0px); }
+.safe-right { padding-right: env(safe-area-inset-right, 0px); }
 
 [data-color-style="oubi"] {
   --bg-primary: #ecf4ee;
@@ -592,7 +652,14 @@ input::-webkit-scrollbar { display: none; }
 }
 
 /* ========== APP LAYOUT ========== */
-#app-layout { position: fixed; inset: 0; display: none; z-index: 1; }
+#app-layout {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 1;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 #app-layout.visible { display: flex; }
 
 /* ========== SIDEBAR ========== */
@@ -1479,32 +1546,6 @@ input::-webkit-scrollbar { display: none; }
 .input-hint { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 8px; letter-spacing: 0.04em; }
 
 
-/* ✨ 星星彩蛋 - 点击交互 */
-.star-click {
-  display: inline-block;
-  cursor: pointer;
-  transition: all var(--transition-spring);
-  position: relative;
-  user-select: none;
-}
-.star-click:hover {
-  transform: scale(1.3) rotate(15deg);
-  color: var(--accent-1);
-  text-shadow: 0 0 20px rgba(212,160,192,0.5);
-}
-.star-click:active {
-  transform: scale(0.8);
-}
-.star-click.sparkle {
-  animation: starSparkle 0.6s var(--bounce-in);
-}
-@keyframes starSparkle {
-  0% { transform: scale(1) rotate(0deg); }
-  30% { transform: scale(1.8) rotate(30deg); color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.8); }
-  60% { transform: scale(0.9) rotate(-10deg); }
-  100% { transform: scale(1) rotate(0deg); }
-}
-
 /* ========== SETTINGS ========== */
 #settings-screen { position: fixed; inset: 0; z-index: 200; display: none; flex-direction: column; background: linear-gradient(160deg, var(--bg-primary) 0%, var(--bg-secondary) 35%, var(--bg-tertiary) 100%); }
 #settings-screen.active { display: flex; }
@@ -1638,6 +1679,8 @@ input::-webkit-scrollbar { display: none; }
 
 .hidden { display: none !important; }
 .no-select { user-select: none; -webkit-user-select: none; }
+
+
 
 
 
