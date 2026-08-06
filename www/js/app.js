@@ -958,7 +958,44 @@
     container.appendChild(span);
   }
 })();
+
+// ✨ 星星彩蛋
+    const starLeft = document.getElementById('star-left');
+    const starRight = document.getElementById('star-right');
+    if (starLeft) {
+      starLeft.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.remove('sparkle');
+        void this.offsetWidth;
+        this.classList.add('sparkle');
+        for (var i = 0; i < 12; i++) {
+          setTimeout(function(idx) {
+            var angle = (idx / 12) * Math.PI * 2;
+            var dist = 40 + Math.random() * 60;
+            createStarBurst(e.clientX + Math.cos(angle) * dist, e.clientY + Math.sin(angle) * dist);
+          }, i * 40, i);
+        }
+        showToast('✧ 星雨绽放 ✧');
+      });
+    }
+    if (starRight) {
+      starRight.addEventListener('click', function(e) {
+        e.stopPropagation();
+        this.classList.remove('sparkle');
+        void this.offsetWidth;
+        this.classList.add('sparkle');
+        var msgs = ['💕 宝宝最好啦', '✨ 今天也要开心', '🌟 你是最棒的', '💫 加油哦', '🌈 每天都美好'];
+        var msg = msgs[Math.floor(Math.random() * msgs.length)];
+        showToast(msg);
+        createStarBurst(e.clientX, e.clientY);
+        setTimeout(function() { createStarBurst(e.clientX - 20, e.clientY - 20); }, 100);
+        setTimeout(function() { createStarBurst(e.clientX + 20, e.clientY + 20); }, 200);
+      });
+    }
 })();
+
+
+
 
 
 
