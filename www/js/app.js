@@ -1,6 +1,6 @@
 /* ========================================
    十四行诗 — Main App JS v12
-   时间感知：每次请求注入当前时间
+   缓存优化 + 界面美化
    ======================================== */
 
 (function () {
@@ -420,7 +420,7 @@
   //  - 时间上下文注入到最后一条用户消息（不影响缓存前缀）
   //  - 超长对话压缩中间轮次，保留头尾
   // ==========================================
-  function buildCacheAwareMessages(sysPrompt, allMessages, timeContext) {
+  function buildCacheAwareMessages(sysPrompt, allMessages) {
     var MAX_PREFIX_PAIRS = 4;   // 保留前 N 轮作为缓存前缀
     var MAX_SUFFIX_PAIRS = 4;   // 保留后 N 轮作为近期上下文
     var COMPACT_THRESHOLD = 20; // 超过此消息数触发压缩
@@ -436,9 +436,8 @@
     //    关键：新消息本来就不在缓存中，加时间不影响缓存
     var lastIdx = history.length - 1;
     if (history[lastIdx].role === 'user') {
-      history[lastIdx].content = history[lastIdx].content + '\n\n(' + timeContext + ')';
+      history[lastIdx].content = history[lastIdx].content;
     } else {
-      history.push({ role: 'system', content: '(' + timeContext + ')' });
     }
 
     // 4. 超长对话压缩中间轮次，保留缓存前缀
@@ -499,14 +498,11 @@
     try {
       const sysPrompt = (settings.systemPrompt && settings.systemPrompt.trim()) ? settings.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
 
-      // 缓存优化：时间信息放在 messages 末尾，不影响前缀缓存
       const nowDate = new Date();
-      const timeStr = '当前时间：' + nowDate.toLocaleString('zh-CN', { hour12: false })
-        + ' 星期' + ['日','一','二','三','四','五','六'][nowDate.getDay()];
 
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
-        messages: buildCacheAwareMessages(sysPrompt, conv.messages, timeStr),
+        messages: buildCacheAwareMessages(sysPrompt, conv.messages),
 
       };
       const res = await fetch(fullUrl, {
