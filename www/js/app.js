@@ -955,6 +955,41 @@
   }
 })();
 
+
+// 流星雨生成（多颗同时）
+(function initShootingStars() {
+  var container = document.querySelector('.intro-stars');
+  if (!container) return;
+  function createShootingStar(isBig) {
+    var star = document.createElement('div');
+    star.className = 'shooting-star' + (isBig ? ' big' : '');
+    star.style.left = (40 + Math.random() * 60) + '%';
+    star.style.top = (Math.random() * 40) + '%';
+    var dur = (0.8 + Math.random() * 1.2);
+    star.style.setProperty('--dur', dur + 's');
+    star.style.animationDelay = (Math.random() * 0.3) + 's';
+    container.appendChild(star);
+    setTimeout(function() { if (star.parentNode) star.remove(); }, (dur + 0.5) * 1000);
+  }
+  // 初始爆发：同时生成 5-8 颗
+  var count = 5 + Math.floor(Math.random() * 4);
+  for (var i = 0; i < count; i++) {
+    setTimeout(function() { createShootingStar(Math.random() < 0.2); }, i * 100 + Math.random() * 200);
+  }
+  // 持续生成：每 0.5-1.5 秒一颗
+  function scheduleNext() {
+    setTimeout(function() {
+      // 有时一次生成 2-3 颗
+      var batch = 1 + Math.floor(Math.random() * 2);
+      for (var i = 0; i < batch; i++) {
+        setTimeout(function() { createShootingStar(Math.random() < 0.15); }, i * 80);
+      }
+      scheduleNext();
+    }, 500 + Math.random() * 1000);
+  }
+  scheduleNext();
+})();
+
 // ✨ 星星彩蛋
     const starLeft = document.getElementById('star-left');
     const starRight = document.getElementById('star-right');
@@ -989,6 +1024,8 @@
       });
     }
 })();
+
+
 
 
 
