@@ -102,7 +102,12 @@
   const $sidebarSearch  = document.getElementById('sidebar-search-input');
   const $sidebarExport  = document.getElementById('sidebar-export');
   const $sidebarTheme   = document.getElementById('sidebar-theme');
-  const $themePicker    = document.getElementById('sidebar-theme-picker');
+  const $themeSelector  = document.getElementById('theme-selector');
+  const $themeCurrent  = document.getElementById('theme-current');
+  const $themePanel    = document.getElementById('theme-panel');
+  const $themeOptions  = $themePanel ? $themePanel.querySelectorAll('.theme-option') : [];
+  const $themeIcon     = $themeCurrent ? $themeCurrent.querySelector('.theme-current-icon') : null;
+  const $themeLabel    = $themeCurrent ? $themeCurrent.querySelector('.theme-current-label') : null;
   const $topbarTitle    = document.getElementById('topbar-title');
   const $streamStatus   = document.getElementById('stream-status');
   const $streamStop     = document.getElementById('stream-stop');
@@ -686,7 +691,16 @@
 
   function updateThemeUI() {
     if ($sidebarTheme) $sidebarTheme.textContent = theme === 'dark' ? '☀️ 浅色' : '🌙 暗色';
-    if ($themePicker) $themePicker.value = colorStyle;
+    // 更新嵌入式主题选择器
+    if ($themeOptions && $themeOptions.length > 0) {
+      const selected = Array.from($themeOptions).find(o => o.dataset.color === colorStyle);
+      if (selected) {
+        $themeOptions.forEach(o => o.classList.remove('active'));
+        selected.classList.add('active');
+        if ($themeIcon) $themeIcon.textContent = selected.textContent.trim().charAt(0);
+        if ($themeLabel) $themeLabel.textContent = selected.textContent.trim().substring(2);
+      }
+    }
   }
 
   let toastTimer = null;
@@ -814,13 +828,39 @@
     $sidebarSearch.addEventListener('input', renderSidebar);
     $sidebarExport.addEventListener('click', exportConversation);
     $sidebarTheme.addEventListener('click', toggleTheme);
-    if ($themePicker) {
-      $themePicker.addEventListener('change', function() {
-        colorStyle = this.value;
-        document.documentElement.setAttribute('data-color-style', colorStyle);
-        saveTheme();
-        showToast('已切换至 ' + this.options[this.selectedIndex].text);
+    // 嵌入式主题选择器事件
+    if ($themeCurrent) {
+      $themeCurrent.addEventListener('click', function(e) {
+        e.stopPropagation();
+        $themeSelector.classList.toggle('open');
+        $themeCurrent.setAttribute('aria-expanded', $themeSelector.classList.contains('open'));
       });
+    }
+    if ($themeOptions && $themeOptions.length > 0) {
+      $themeOptions.forEach(function(opt) {
+        opt.addEventListener('click', function() {
+          const newColor = this.dataset.color;
+          if (newColor === colorStyle) { closeThemePanel(); return; }
+          colorStyle = newColor;
+          document.documentElement.setAttribute('data-color-style', colorStyle);
+          saveTheme();
+          updateThemeUI();
+          showToast('已切换至 ' + this.textContent.trim());
+          closeThemePanel();
+        });
+      });
+    }
+    // 点击外部关闭主题面板
+    document.addEventListener('click', function(e) {
+      if ($themeSelector && !$themeSelector.contains(e.target)) {
+        closeThemePanel();
+      }
+    });
+    function closeThemePanel() {
+      if ($themeSelector) {
+        $themeSelector.classList.remove('open');
+        if ($themeCurrent) $themeCurrent.setAttribute('aria-expanded', 'false');
+      }
     }
 
     $chatMessages.addEventListener('scroll', () => {
@@ -906,5 +946,22 @@
   } else {
     init();
   }
+
+// ✨ 动态生成开屏星星粒子
+(function initStarParticles() {
+  const container = document.querySelector('.intro-stars');
+  if (!container) return;
+  for (let i = 0; i < 30; i++) {
+    const span = document.createElement('span');
+    const size = Math.random() * 2.5 + 1.5;
+    span.style.cssText = `left: ${Math.random() * 100}%; top: ${Math.random() * 100}%; width: ${size}px; height: ${size}px; animation-delay: ${Math.random() * 5}s; animation-duration: ${3 + Math.random() * 4}s;`;
+    container.appendChild(span);
+  }
 })();
+})();
+
+
+
+
+
 
