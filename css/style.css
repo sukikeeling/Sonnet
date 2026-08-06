@@ -1214,12 +1214,12 @@ input::-webkit-scrollbar { display: none; }
 }
 
 #chat-topbar {
-  position: relative; z-index: 15;
+  position: absolute; top: 0; left: 0; right: 0; z-index: 15;
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(env(safe-area-inset-top, 12px) + 8px) 16px 8px;
-  transition: background var(--transition-slow);
   background: transparent;
-  border-bottom: none;
+  border: none;
+  pointer-events: none;
 }
 .topbar-btn {
   width: 36px; height: 36px;
@@ -1237,6 +1237,7 @@ input::-webkit-scrollbar { display: none; }
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
+  pointer-events: auto;
 }
 .topbar-btn::before {
   content: '';
