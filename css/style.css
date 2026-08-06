@@ -1086,12 +1086,6 @@ input::-webkit-scrollbar { display: none; }
 [data-color-style="haitianxia"] .sidebar-field:focus { border-color: #d08068 !important; }
 
 /* 顶部导航栏主题色 */
-[data-color-style="lvchen"] #chat-topbar { border-bottom-color: rgba(74,138,56,0.15) !important; }
-[data-color-style="dingxiang"] #chat-topbar { border-bottom-color: rgba(176,128,208,0.15) !important; }
-[data-color-style="tianpiao"] #chat-topbar { border-bottom-color: rgba(80,144,176,0.15) !important; }
-[data-color-style="daizhe"] #chat-topbar { border-bottom-color: rgba(176,112,72,0.15) !important; }
-[data-color-style="oubi"] #chat-topbar { border-bottom-color: rgba(80,160,120,0.15) !important; }
-[data-color-style="haitianxia"] #chat-topbar { border-bottom-color: rgba(208,128,104,0.15) !important; }
 
 /* 模型徽标跟随主题 */
 [data-color-style="lvchen"] .model-badge { background: rgba(74,138,56,0.12) !important; color: #4a8a38 !important; }
@@ -1224,6 +1218,8 @@ input::-webkit-scrollbar { display: none; }
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(env(safe-area-inset-top, 12px) + 8px) 16px 8px;
   transition: background var(--transition-slow);
+  background: transparent;
+  border-bottom: none;
 }
 .topbar-btn {
   width: 36px; height: 36px;
