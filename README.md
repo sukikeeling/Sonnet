@@ -33,7 +33,9 @@ cd android
 ## 贡献者
 
 - [sukikeeling](https://github.com/sukikeeling) — 项目创建者
-- Reasonix AI — 缓存优化、多主题系统、UI 美化、流星雨、性能优化
+- [DeepSeek](https://deepseek.com) — 智力支持（大脑）
+- [Reasonix](https://reasonix.ai) — 编码执行（身体）
+- 特别感谢 **阿里百炼** 学生 300 元优惠券，为本项目提供了充足的 Token 调用
 
 ## 开源协议
 
