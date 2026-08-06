@@ -4,6 +4,10 @@
 
 基于 Web 技术构建的 AI 聊天应用，支持多模型、多主题、多对话管理。
 
+## 项目历程
+
+项目最初由 **Claude** 启发，后续由 **Claude Code + DeepSeek**、**Claude Code + Mimo 2.5** 搭建骨架，**小米百亿 Token** 支持，最终由 **Reasonix + DeepSeek** 调试打磨至终版。
+
 ## 特性
 
 - ✨ 流式 SSE 响应，AI 回复实时逐字输出
@@ -33,9 +37,11 @@ cd android
 ## 贡献者
 
 - [sukikeeling](https://github.com/sukikeeling) — 项目创建者
+- [Claude](https://anthropic.com/claude) — 项目启发者
 - [DeepSeek](https://deepseek.com) — 智力支持（大脑）
 - [Reasonix](https://reasonix.ai) — 编码执行（身体）
-- 特别感谢 **阿里百炼** 学生 300 元优惠券，为本项目提供了充足的 Token 调用
+- 感谢 **小米** 百亿 Token 支持
+- 感谢 **阿里百炼** 学生 300 元优惠券，为本项目提供了充足的 Token 调用
 
 ## 开源协议
 
