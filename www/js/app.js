@@ -810,7 +810,7 @@
 
     $btnSettings.addEventListener('click', () => { switchToSettings(); });
     $settingsBack.addEventListener('click', switchFromSettings);
-    document.getElementById('settings-screen').addEventListener('click', function(e) { createStarBurst(e.clientX, e.clientY)(e.clientX, e.clientY); });
+    document.getElementById('settings-screen').addEventListener('click', function(e) { createStarBurst(e.clientX, e.clientY); });
     $sSave.addEventListener('click', collectSettings);
     $sTemperature.addEventListener('input', () => { $tempVal.textContent = $sTemperature.value; });
     $sProvider.addEventListener('change', onProviderChange);
@@ -869,7 +869,7 @@
       $scrollBtn.classList.toggle('hidden', isNearBottom);
     });
     $scrollBtn.addEventListener('click', () => { scrollToBottom(); $scrollBtn.classList.add('hidden'); });
-    $chatMessages.addEventListener('click', function(e) { createStarBurst(e.clientX, e.clientY); });
+    $chatMessages.addEventListener('click', function(e) { if (e.target.closest('.star-click')) return; createStarBurst(e.clientX, e.clientY); });
 
     let touchStartX = 0;
     $introSlides.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
@@ -993,6 +993,8 @@
       });
     }
 })();
+
+
 
 
 
