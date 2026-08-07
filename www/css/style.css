@@ -863,13 +863,13 @@ input::-webkit-scrollbar { display: none; }
   display: flex; flex-direction: column;
 }
 .watermark-row {
-  white-space: nowrap; font-size: 15px;
+  white-space: nowrap; font-size: 13px;
   color: rgba(212,160,192,0.35);
-  letter-spacing: 0.12em; line-height: 2.6em;
-  animation: wmScroll 14s linear infinite;
+  letter-spacing: 0.08em; line-height: 2.7em;
+  animation: wmScroll 22s linear infinite;
   will-change: transform;
 }
-.watermark-row:nth-child(even) { animation-name: wmScrollR; animation-duration: 16s; }
+.watermark-row:nth-child(even) { animation-name: wmScrollR; animation-duration: 26s; }
 
 
 /* ========== 多主题系统 ========== */
@@ -1167,7 +1167,7 @@ input::-webkit-scrollbar { display: none; }
 
 /* 暗色模式水印可见度 */
 [data-theme="dark"] .watermark-row {
-  color: rgba(180,140,160,0.45);
+  color: rgba(180,140,160,0.25);
 }
 
 /* 暗色模式星云背景 */

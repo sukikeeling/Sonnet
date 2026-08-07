@@ -793,8 +793,8 @@
 
     const watermarkEl = document.querySelector('.chat-watermark');
     if (watermarkEl) {
-      const unit = '✦ ฅ( ̳• ◡ • ̳)ฅ keeling  ✦  ';
-      const rowText = unit.repeat(32);
+      const unit = 'ฅ( ̳• ◡ • ̳)ฅ keeling  ✦  ';
+      const rowText = unit.repeat(20);
       for (let i = 0; i < 24; i++) {
         const row = document.createElement('div');
         row.className = 'watermark-row';
