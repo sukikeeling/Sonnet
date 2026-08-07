@@ -426,8 +426,6 @@
   function removeLoading() { const el = $chatMessages.querySelector('.loading-msg'); if (el) el.remove(); }
   function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTo({ top: $chatMessages.scrollHeight, behavior: "smooth" }); }); }
 
-  function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTo({ top: $chatMessages.scrollHeight, behavior: "smooth" }); }); }
-
   // ==========================================
   //  CACHE-AWARE MESSAGE BUILDER
   //  借鉴 Reasonix prefix-preservation 策略：
