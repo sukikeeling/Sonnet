@@ -29,7 +29,7 @@
   }
 
   const PROVIDERS = {
-    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flash'] },
+    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-v4-flash'] },
     custom:   { name: '自定义/中转站', url: '', models: [] },
   };
 
@@ -57,7 +57,7 @@
   const DEFAULT_SETTINGS = {
     apiKey: '',
     apiUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     provider: 'deepseek',
     temperature: 0.8,
     maxTokens: 4096,
