@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -157,12 +157,22 @@
       <label class="field-label">API Key</label>
       <input type="password" id="s-api-key" class="field-input" placeholder="输入你的 API Key">
       <label class="field-label">服务商</label>
-      <select id="s-provider" class="field-input">
+      <label class="field-label">服务商</label>
+      <select id="s-provider" class="field-input" style="display:none">
         <option value="deepseek">DeepSeek</option>
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
         <option value="custom">自定义 / 中转站</option>
       </select>
+      <div class="cs-select" id="provider-cs">
+        <div class="cs-trigger">
+          <span class="cs-trigger-label"><span class="cs-dot cs-dot-deepseek"></span><span class="cs-label">DeepSeek</span></span>
+          <svg class="cs-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cs-menu">
+          <div class="cs-option" data-value="deepseek"><span class="cs-dot cs-dot-deepseek"></span>DeepSeek</div>
+          <div class="cs-option" data-value="custom"><span class="cs-dot cs-dot-custom"></span>自定义 / 中转站</div>
+        </div>
+      </div>
+      
       <label class="field-label">API 地址</label>
       <input type="text" id="s-api-url" class="field-input" placeholder="选择服务商后自动填写">
       <label class="field-label">模型</label>
@@ -170,8 +180,6 @@
       <div class="model-quick-fill" id="model-presets">
         <button class="quick-fill-btn" data-provider="deepseek" data-model="deepseek-chat" data-url="https://api.deepseek.com/v1">deepseek-chat</button>
         <button class="quick-fill-btn" data-provider="deepseek" data-model="deepseek-v4-flash" data-url="https://api.deepseek.com/v1">deepseek-v4-flash</button>
-        <button class="quick-fill-btn" data-provider="openai" data-model="gpt-4o" data-url="https://api.openai.com/v1">gpt-4o</button>
-        <button class="quick-fill-btn" data-provider="openai" data-model="gpt-4o-mini" data-url="https://api.openai.com/v1">gpt-4o-mini</button>
         <button class="quick-fill-btn" data-provider="custom" data-model="" data-url="">自定义</button>
       </div>
     </div>
@@ -196,6 +204,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.0/purify.min.js"></script>
 <script src="js/app.js?v=13"></script>
+<!-- 删除确认灵动弹窗 -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-card">
+    <div class="confirm-avatar-wrap">
+      <div class="confirm-spinner" aria-hidden="true"></div>
+      <div class="confirm-avatar">✕</div>
+    </div>
+    <div class="confirm-title">删去这一章？</div>
+    <div class="confirm-msg" id="confirm-msg">这一页诗笺将化作流萤散入夜风……<br>你确定要亲手合上它吗？</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" id="confirm-cancel">再想一想</button>
+      <button class="confirm-btn danger" id="confirm-ok">就删了吧</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 

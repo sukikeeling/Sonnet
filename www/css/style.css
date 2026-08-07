@@ -1,4 +1,4 @@
-/* ========================================
+﻿/* ========================================
    十四行诗 — Style Sheet v13 — 高端视觉重构
    星星点缀 + 滚动按钮 + 时间戳 + 模型徽标 + 星云背景 + 胶囊按钮 + 毛玻璃
    参考：ChatGPT-Next-Web / LobeChat 设计模式
@@ -1690,44 +1690,176 @@ input::-webkit-scrollbar { display: none; }
 .hidden { display: none !important; }
 .no-select { user-select: none; -webkit-user-select: none; }
 
+/* ==========================================
+   谷歌灵动风 — 删除确认弹窗
+   头像 = 谷歌会员头像风格（彩虹渐变圆）
+   外环 = Play Store 下载进度环（彩虹弧旋转）
+   ========================================== */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(18, 10, 22, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: none;
+  align-items: center; justify-content: center;
+}
+.confirm-overlay.show { display: flex; animation: overlay-fade 0.25s ease; }
+@keyframes overlay-fade { from { opacity: 0; } to { opacity: 1; } }
 
+.confirm-card {
+  position: relative;
+  width: min(330px, 88vw);
+  padding: 30px 26px 24px;
+  border-radius: 32px;
+  background: var(--bg-card-solid);
+  box-shadow: 0 28px 70px rgba(30, 15, 40, 0.4);
+  text-align: center;
+  overflow: hidden;
+  animation: card-pop 0.32s cubic-bezier(0.34, 1.4, 0.44, 1);
+}
+@keyframes card-pop {
+  from { transform: scale(0.86) translateY(20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
 
+/* ---- 谷歌会员头像风格：彩虹渐变圆 + Play Store 旋转弧环 ---- */
+.confirm-avatar-wrap {
+  position: relative;
+  width: 108px; height: 108px;
+  margin: 4px auto 18px;
+}
+/* Play Store 下载进度环：彩虹渐变弧线绕圆旋转 */
+.confirm-spinner {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 0deg,
+      #ff6b6b, #ffd93d, #6bcf7f, #4da6ff, #a78bfa, #f472b6, #ff6b6b);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  animation: rainbow-rotate 1.6s linear infinite;
+}
+/* 缺口：让彩虹环呈现"一段弧"效果（Play Store 弧线样式） */
+.confirm-spinner::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: var(--bg-card-solid);
+  -webkit-mask: radial-gradient(farthest-side, #000 calc(100% - 5px), transparent calc(100% - 4px));
+  mask: radial-gradient(farthest-side, #000 calc(100% - 5px), transparent calc(100% - 4px));
+  transform: rotate(-60deg);
+  clip-path: polygon(0 0, 62% 0, 100% 100%, 0 100%);
+}
+@keyframes rainbow-rotate {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+/* 谷歌会员头像：彩虹渐变圆形徽章 */
+.confirm-avatar {
+  position: absolute;
+  top: 14px; left: 14px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 600; color: #fff;
+  background: conic-gradient(from 210deg,
+    #ff6b6b 0deg, #ffd93d 72deg, #6bcf7f 144deg,
+    #4da6ff 216deg, #a78bfa 288deg, #ff6b6b 360deg);
+  box-shadow: 0 10px 24px rgba(90, 60, 140, 0.35), inset 0 2px 6px rgba(255,255,255,0.35);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  animation: avatar-glow 2.4s ease-in-out infinite;
+}
+@keyframes avatar-glow {
+  0%, 100% { box-shadow: 0 10px 24px rgba(90,60,140,0.35), inset 0 2px 6px rgba(255,255,255,0.35); }
+  50%      { box-shadow: 0 12px 32px rgba(157,90,220,0.55), inset 0 2px 6px rgba(255,255,255,0.45); }
+}
 
+.confirm-title {
+  font-size: 18px; font-weight: 700; color: var(--text-primary);
+  letter-spacing: 1px; margin-bottom: 10px;
+}
+.confirm-msg {
+  font-size: 13px; line-height: 1.8; color: var(--text-secondary);
+  margin-bottom: 22px;
+}
+.confirm-actions { display: flex; gap: 12px; }
+.confirm-btn {
+  flex: 1; padding: 13px 0; border: none; border-radius: 20px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.4, 0.44, 1);
+}
+.confirm-btn.cancel {
+  background: rgba(212, 180, 200, 0.16);
+  color: var(--text-secondary);
+}
+.confirm-btn.cancel:hover { background: rgba(212, 180, 200, 0.28); transform: translateY(-1px); }
+.confirm-btn.cancel:active { transform: scale(0.95); }
+.confirm-btn.danger {
+  background: linear-gradient(135deg, #f06292, #a855f7);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(190, 90, 220, 0.4);
+}
+.confirm-btn.danger:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(190, 90, 220, 0.5); }
+.confirm-btn.danger:active { transform: scale(0.95); }
 
+/* ==========================================
+   谷歌灵动风 — 自定义服务商下拉
+   ========================================== */
+.cs-select { position: relative; }
+.cs-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color); border-radius: 18px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13.5px; font-weight: 500; cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.4, 0.44, 1);
+}
+.cs-trigger:hover { border-color: var(--accent-1); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(212,160,192,0.18); }
+.cs-trigger-label {
+  display: flex; align-items: center; gap: 10px;
+}
+.cs-arrow { color: var(--text-secondary); transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.44, 1); }
+.cs-select.open .cs-arrow { transform: rotate(180deg); }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+.cs-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: 0 18px 48px rgba(40, 20, 50, 0.3);
+  overflow: hidden;
+  opacity: 0; transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.34, 1.4, 0.44, 1);
+  z-index: 30;
+}
+.cs-select.open .cs-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.cs-option {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; font-size: 13.5px;
+  color: var(--text-secondary); cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cs-option:hover { background: rgba(212, 160, 192, 0.1); color: var(--text-primary); padding-left: 20px; }
+.cs-option:active { transform: scale(0.98); }
+.cs-option.active {
+  color: var(--accent-1); font-weight: 600;
+  background: rgba(212, 160, 192, 0.12);
+}
+.cs-option:not(:last-child) { border-bottom: 1px solid var(--border-light); }
+/* 彩虹渐变圆点（谷歌头像迷你版） */
+.cs-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.cs-dot-deepseek {
+  background: conic-gradient(from 210deg,
+    #4da6ff 0deg, #a78bfa 180deg, #6bcf7f 300deg, #4da6ff 360deg);
+}
+.cs-dot-custom {
+  background: conic-gradient(from 210deg,
+    #ffd93d 0deg, #ff6b6b 180deg, #f472b6 300deg, #ffd93d 360deg);
+}
+/* 触发按钮左侧也显示彩虹圆点 */
+.cs-trigger .cs-dot { width: 14px; height: 14px; }
