@@ -29,8 +29,7 @@
   }
 
   const PROVIDERS = {
-    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flask'] },
-    openai:   { name: 'OpenAI',   url: 'https://api.openai.com/v1',   models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
+    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', models: ['deepseek-chat', 'deepseek-v4-flash'] },
     custom:   { name: '自定义/中转站', url: '', models: [] },
   };
 
@@ -268,7 +267,7 @@
       el.addEventListener('click', (e) => { if (e.target.classList.contains('conv-del')) return; switchConversation(el.dataset.id); });
     });
     $sidebarConvList.querySelectorAll('.conv-del').forEach(btn => {
-      btn.addEventListener('click', (e) => { e.stopPropagation(); if (confirm('确定删除这个对话吗？')) deleteConversation(btn.dataset.id); });
+      btn.addEventListener('click', (e) => { e.stopPropagation(); pendingDeleteId = btn.dataset.id; openConfirmModal(); });
     });
   }
 
@@ -1065,6 +1064,76 @@
         setTimeout(function() { createStarBurst(e.clientX + 20, e.clientY + 20); }, 200);
       });
     }
+  // ==========================================
+  //  删除确认灵动弹窗（十四行诗风格挽留）
+  // ==========================================
+  let pendingDeleteId = null;
+  const $confirmOverlay = document.getElementById('confirm-overlay');
+  const $confirmMsg = document.getElementById('confirm-msg');
+
+  function openConfirmModal() {
+    if (!$confirmOverlay) return;
+    const msgs = [
+      '这一页诗笺将化作流萤散入夜风……<br>你确定要亲手合上它吗？',
+      '字里行间的温柔，删去便再无归处。<br>这一章，真的要作别吗？',
+      '诗未写完，墨迹未干。<br>且再想一想，可好？',
+    ];
+    $confirmMsg.innerHTML = msgs[Math.floor(Math.random() * msgs.length)];
+    $confirmOverlay.classList.add('show');
+  }
+  function closeConfirmModal() {
+    if (!$confirmOverlay) return;
+    $confirmOverlay.classList.remove('show');
+    setTimeout(() => { $confirmOverlay.classList.remove('show'); pendingDeleteId = null; }, 300);
+
+  }
+  document.getElementById('confirm-cancel')?.addEventListener('click', closeConfirmModal);
+  document.getElementById('confirm-ok')?.addEventListener('click', () => {
+    if (pendingDeleteId) deleteConversation(pendingDeleteId);
+    closeConfirmModal();
+  });
+  $confirmOverlay?.addEventListener('click', (e) => { if (e.target === $confirmOverlay) closeConfirmModal(); });
+
+  // ==========================================
+  //  自定义服务商下拉（灵动风格）
+  // ==========================================
+  const $providerCs = document.getElementById('provider-cs');
+  const $providerLabel = $providerCs ? $providerCs.querySelector('.cs-label') : null;
+
+  function syncProviderLabel() {
+    if (!$providerCs) return;
+    const key = $sProvider.value;
+    const opt = $providerCs.querySelector(`.cs-option[data-value="${key}"]`);
+    $providerLabel.textContent = opt ? opt.textContent.trim() : $sProvider.value;
+    const $dot = $providerCs.querySelector('.cs-trigger .cs-dot');
+    if ($dot) { $dot.className = opt ? opt.querySelector('.cs-dot').className : 'cs-dot cs-dot-deepseek'; }
+    $providerCs.querySelectorAll('.cs-option').forEach(o => o.classList.toggle('active', o.dataset.value === key));
+  }
+  if ($providerCs) {
+    $providerCs.querySelector('.cs-trigger').addEventListener('click', (e) => {
+      e.stopPropagation();
+      $providerCs.classList.toggle('open');
+    });
+    $providerCs.querySelectorAll('.cs-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        $sProvider.value = opt.dataset.value;
+        $providerCs.classList.remove('open');
+        onProviderChange();
+        syncProviderLabel();
+      });
+    });
+    document.addEventListener('click', () => $providerCs.classList.remove('open'));
+  }
+  // 初始化时同步一次（含从 localStorage 恢复的服务商）
+  if ($providerCs) syncProviderLabel();
+  // applyPreset 快捷按钮填充后也要同步
+  const _origApplyPreset = applyPreset;
+  applyPreset = function(providerKey, model, url) {
+    _origApplyPreset(providerKey, model, url);
+    if ($providerCs) { syncProviderLabel(); }
+  };
+
 })();
 
 
