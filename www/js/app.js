@@ -1,4 +1,4 @@
-/* ========================================
+﻿/* ========================================
    十四行诗 — Main App JS v12
    缓存优化 + 界面美化
    ======================================== */
@@ -24,7 +24,7 @@
       },
       langPrefix: 'hljs language-',
       gfm: true,
-      breaks: false,
+      breaks: true,
     });
   }
 
@@ -196,11 +196,16 @@
 
   function loadTheme() {
     try { const saved = localStorage.getItem(STORAGE_KEY_THEME); if (saved === 'dark' || saved === 'light') theme = saved; } catch {}
-    document.documentElement.setAttribute('data-theme', theme); updateThemeUI();
+    try { const saved = localStorage.getItem(STORAGE_KEY_COLOR_STYLE); if (saved) colorStyle = saved; } catch {}
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-color-style', colorStyle);
+    updateThemeUI();
   }
   function saveTheme() { try { localStorage.setItem(STORAGE_KEY_THEME, theme); } catch {} try { localStorage.setItem(STORAGE_KEY_COLOR_STYLE, colorStyle); } catch {} }
 
   function switchToChat() { $introScreen.classList.add('hidden'); $appLayout.classList.add('visible'); }
+  // 页面关闭前保存主题
+  window.addEventListener('beforeunload', function() { saveTheme(); });
   function switchToSettings() { populateSettings(); $settingsScreen.classList.add('active'); }
   function switchFromSettings() { $settingsScreen.classList.remove('active'); }
 
@@ -374,10 +379,18 @@
     });
     actions.querySelector('.msg-del')?.addEventListener('click', (e) => {
       e.stopPropagation();
+      const btn = e.currentTarget;
+      if (btn.dataset.confirm !== 'true') {
+        btn.dataset.confirm = 'true';
+        btn.textContent = '✓ 确认？';
+        btn.classList.add('del-confirm');
+        setTimeout(() => { btn.dataset.confirm = ''; btn.textContent = '🗑️'; btn.classList.remove('del-confirm'); }, 3000);
+        return;
+      }
       const conv = getCurrentConv(); if (!conv) return;
       const idx = conv.messages.findIndex(m => m.role === role && m.content === content);
       if (idx === -1) return;
-      conv.messages.splice(idx); saveConversations(); renderConversation();
+      conv.messages.splice(idx, 1); saveConversations(); renderConversation();
     });
     actions.querySelector('.msg-regenerate')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -411,7 +424,9 @@
     $chatMessages.appendChild(row); scrollToBottom(); return row;
   }
   function removeLoading() { const el = $chatMessages.querySelector('.loading-msg'); if (el) el.remove(); }
-  function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTop = $chatMessages.scrollHeight; }); }
+  function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTo({ top: $chatMessages.scrollHeight, behavior: "smooth" }); }); }
+
+  function scrollToBottom() { requestAnimationFrame(() => { $chatMessages.scrollTo({ top: $chatMessages.scrollHeight, behavior: "smooth" }); }); }
 
   // ==========================================
   //  CACHE-AWARE MESSAGE BUILDER
@@ -432,15 +447,7 @@
     var history = allMessages.map(function(m) { return { role: m.role, content: m.content }; });
     if (history.length === 0) return result;
 
-    // 3. 时间上下文注入到最后一条消息（用户最新输入）
-    //    关键：新消息本来就不在缓存中，加时间不影响缓存
-    var lastIdx = history.length - 1;
-    if (history[lastIdx].role === 'user') {
-      history[lastIdx].content = history[lastIdx].content;
-    } else {
-    }
-
-    // 4. 超长对话压缩中间轮次，保留缓存前缀
+    // 3. 超长对话压缩中间轮次，保留缓存前缀
     if (history.length > COMPACT_THRESHOLD) {
       var prefixCount = MAX_PREFIX_PAIRS * 2;
       var suffixCount = MAX_SUFFIX_PAIRS * 2;
@@ -459,7 +466,6 @@
     return result;
   }
 
-  // ==========================================
   //  STREAMING
   // ==========================================
   async function sendMessage() {
@@ -503,9 +509,9 @@
       const body = {
         model: settings.model, max_tokens: settings.maxTokens, temperature: settings.temperature, stream: true,
         messages: buildCacheAwareMessages(sysPrompt, conv.messages),
-
       };
       const res = await fetch(fullUrl, {
+        signal: AbortSignal.timeout(30000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + settings.apiKey },
         body: JSON.stringify(body),
@@ -613,6 +619,21 @@
   }
 
   function stopStreaming() { if (streamAbort) streamAbort.abort(); }
+
+  // 安全网：切后台回来/页面恢复时如果 loading 卡死，自动重置
+  function resetLoading() {
+    if (loading) {
+      loading = false;
+      streamAbort = null;
+      $streamStatus.classList.add('hidden');
+      updateSendBtn();
+      removeLoading();
+    }
+  }
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') resetLoading();
+  });
+  window.addEventListener('pageshow', resetLoading);
 
   function updateTokenCount() {
     const conv = getCurrentConv();
@@ -766,7 +787,9 @@
   }
 
   function init() {
-    loadSettings(); loadConversations(); loadTheme();
+    try { loadSettings(); } catch(e) { console.warn('loadSettings failed:', e); }
+    try { loadConversations(); } catch(e) { console.warn('loadConversations failed:', e); }
+    try { loadTheme(); } catch(e) { console.warn('loadTheme failed:', e); }
     renderConversation(); renderSidebar(); updateTokenCount(); updateCharCount();
     // 默认收起侧边栏，开屏结束后直接显示主界面
     $sidebar.classList.add('collapsed');
@@ -936,6 +959,27 @@
       // 默认：退出应用
     }
   }
+  // 安全网：页面加载后强制启用按钮
+  setTimeout(function() {
+    if (loading) {
+      loading = false;
+      streamAbort = null;
+    }
+    updateSendBtn();
+    if (document.getElementById('btn-send') && document.getElementById('chat-input')) {
+      document.getElementById('btn-send').disabled = false;
+    }
+  }, 1000);
+  // 定期检查，防止 loading 卡死
+  setInterval(function() {
+    if (loading) {
+      loading = false;
+      streamAbort = null;
+      removeLoading();
+      updateSendBtn();
+    }
+  }, 5000);
+
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

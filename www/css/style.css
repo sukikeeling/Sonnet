@@ -1677,6 +1677,16 @@ input::-webkit-scrollbar { display: none; }
   .quick-fill-btn { font-size: 10px; min-width: 60px; }
 }
 
+.msg-del.del-confirm {
+  color: #ff6b6b !important;
+  font-weight: bold;
+  font-size: 12px;
+  animation: delPulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes delPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.15); }
+}
 .hidden { display: none !important; }
 .no-select { user-select: none; -webkit-user-select: none; }
 
