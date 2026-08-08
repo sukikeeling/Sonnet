@@ -1867,3 +1867,14 @@ input::-webkit-scrollbar { display: none; }
 }
 /* 触发按钮左侧也显示彩虹圆点 */
 .cs-trigger .cs-dot { width: 14px; height: 14px; }
+
+/* 侧边栏遮罩 */
+#sidebar-overlay {
+  position: fixed; inset: 0; z-index: 28;
+  background: rgba(0,0,0,0.15);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+#sidebar:not(.collapsed) ~ #sidebar-overlay {
+  opacity: 1; pointer-events: auto;
+}

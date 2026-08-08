@@ -795,7 +795,7 @@
     if (watermarkEl) {
       const unit = 'ฅ( ̳• ◡ • ̳)ฅ keeling  ✦  ';
       const rowText = unit.repeat(20);
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < 20; i++) {
         const row = document.createElement('div');
         row.className = 'watermark-row';
         row.textContent = rowText;
@@ -1136,16 +1136,5 @@
 
 })();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  // 侧边栏遮罩点击关闭
+  document.getElementById('sidebar-overlay')?.addEventListener('click', () => $sidebar.classList.add('collapsed'));
