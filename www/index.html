@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -110,6 +110,7 @@
       <button id="sidebar-open" class="topbar-btn" title="展开侧栏">☰</button>
       <span class="topbar-title" id="topbar-title">十四行诗</span>
       <button id="btn-settings" class="topbar-btn" title="设置">⚙</button>
+      <button id="btn-diary" class="topbar-btn" title="日记">📖</button>
     </div>
     <div id="chat-messages">
       <div class="chat-hero" data-keep>
@@ -198,6 +199,16 @@
   </div>
 </div>
 
+<!-- 日记页面 -->
+<div id="diary-screen">
+  <div id="diary-header">
+    <button id="diary-back" class="topbar-btn" title="返回">←</button>
+    <h1>日记</h1>
+    <span class="diary-day-count" id="diary-day-count"></span>
+  </div>
+  <div id="diary-body"></div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
@@ -224,6 +235,7 @@
 <script src="js/app.js?v=13"></script>
 </body>
 </html>
+
 
 
 
