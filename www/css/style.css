@@ -864,7 +864,7 @@ input::-webkit-scrollbar { display: none; }
 }
 .watermark-row {
   white-space: nowrap; font-size: 13px;
-  color: rgba(212,160,192,0.35);
+  color: rgba(212,160,192,0.5);
   letter-spacing: 0.08em; line-height: 2.7em;
   animation: wmScroll 22s linear infinite;
   will-change: transform;
@@ -1167,7 +1167,7 @@ input::-webkit-scrollbar { display: none; }
 
 /* 暗色模式水印可见度 */
 [data-theme="dark"] .watermark-row {
-  color: rgba(180,140,160,0.25);
+  color: rgba(180,140,160,0.1);
 }
 
 /* 暗色模式星云背景 */
