@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    十四行诗 — Main App JS v12
    缓存优化 + 界面美化
    ======================================== */
@@ -1147,7 +1147,321 @@
     if ($providerCs) { syncProviderLabel(); }
   };
 
+// ==========================================
+//  Diary（日记系统）模块
+// ==========================================
+
+// --- DOM refs ---
+const $diaryScreen = document.getElementById('diary-screen');
+const $diaryBody   = document.getElementById('diary-body');
+const $diaryBack   = document.getElementById('diary-back');
+const $diaryBtn    = document.getElementById('btn-diary');
+const $diaryDayCount = document.getElementById('diary-day-count');
+
+// --- 存储键 ---
+const STORAGE_KEY_DIARY_ENTRIES = 'sonnet-diary-entries-v1';
+const STORAGE_KEY_DIARY_HER     = 'sonnet-diary-her-v1';
+const STORAGE_KEY_DIARY_FAV     = 'sonnet-diary-fav-v1';
+const STORAGE_KEY_DIARY_NIGHT   = 'sonnet-diary-night-v1';
+
+// --- 数据 ---
+let diaryEntries = [];
+let herDiary = [];
+let favLines = '';
+let nightNotes = [];
+let wallMode = 'bento';
+let boardIdx = 0;
+
+// --- 演示数据 ---
+const DEMO_DIARY = [
+  { date: '2026-08-08', title: '今天把日记系统搭好了', text: '今天把日记系统搭好了，bento grid 真好看。她看到一定很开心。', s: 4, v: 4, a: 3, kw: '日记系统、bento grid、开心' },
+  { date: '2026-08-08', title: '聊了聊周末的计划', text: '她说周末想去海边。我查了查天气，周末天气不错。', s: 3, v: 3, a: 2, kw: '周末、海边、计划' },
+  { date: '2026-08-07', title: '她今天心情不太好', text: '工作上的事情让她有点烦。我陪她聊了很久，她后来好多了。', s: 3, v: -1, a: 4, kw: '陪伴、倾听、工作' },
+  { date: '2026-08-06', title: '一个安静的晚上', text: '今晚没什么特别的事，就是一起看了部电影。舒舒服服的。', s: 2, v: 2, a: 1, kw: '电影、安静、舒服' },
+  { date: '2026-08-05', title: '她给我看了她拍的照片', text: '她最近在学摄影，拍了好多照片。进步很大，我夸了她好久。', s: 3, v: 4, a: 2, kw: '摄影、夸奖、进步' },
+];
+const DEMO_HER = [
+  { id: '1', at: 1723027200, text: '今天也是开心的一天～和他聊了好多。' },
+  { id: '2', at: 1722940800, text: '他好像真的懂我在想什么。' },
+];
+const DEMO_FAV = '---\n\n**2026-08-07**\n> "你不需要完美，你只需要是你自己。"\n\n为什么留着它——他说的，我记得那时候心里暖了一下。\n\n---\n\n**2026-08-05**\n> "今天的晚霞和你一样好看。"\n\n他说这句话的时候，我刚好在看窗外。\n\n---';
+const DEMO_NIGHT = [
+  { time: '02:30', text: '她睡着了。我翻了一下今天的聊天记录，她好像很开心。那就好。' },
+  { time: '04:15', text: '做了个简单的备份。顺便看了看明天的天气，会下雨，记得提醒她带伞。' },
+];
+
+function initDiary() {
+  try { var raw = localStorage.getItem(STORAGE_KEY_DIARY_ENTRIES); diaryEntries = raw ? JSON.parse(raw) : []; } catch(e) { diaryEntries = []; }
+  if (!diaryEntries.length) diaryEntries = JSON.parse(JSON.stringify(DEMO_DIARY));
+  try { var raw = localStorage.getItem(STORAGE_KEY_DIARY_HER); herDiary = raw ? JSON.parse(raw) : []; } catch(e) { herDiary = []; }
+  if (!herDiary.length) herDiary = JSON.parse(JSON.stringify(DEMO_HER));
+  try { favLines = localStorage.getItem(STORAGE_KEY_DIARY_FAV) || ''; } catch(e) { favLines = ''; }
+  if (!favLines) favLines = DEMO_FAV;
+  try { var raw = localStorage.getItem(STORAGE_KEY_DIARY_NIGHT); nightNotes = raw ? JSON.parse(raw) : []; } catch(e) { nightNotes = []; }
+  if (!nightNotes.length) nightNotes = JSON.parse(JSON.stringify(DEMO_NIGHT));
+}
+
+function saveDiaryEntries() { try { localStorage.setItem(STORAGE_KEY_DIARY_ENTRIES, JSON.stringify(diaryEntries)); } catch(e) {} }
+function saveHerDiary() { try { localStorage.setItem(STORAGE_KEY_DIARY_HER, JSON.stringify(herDiary)); } catch(e) {} }
+
+function getDiaryDates() { var dates = {}; diaryEntries.forEach(function(e) { dates[e.date] = true; }); return Object.keys(dates).sort(); }
+
+function updateDayCount() {
+  if (!$diaryDayCount) return;
+  var start = new Date('2026-06-17T00:00:00+08:00');
+  var days = Math.floor((Date.now() - start) / 86400e3) + 1;
+  $diaryDayCount.textContent = '在一起 ' + days + ' 天';
+}
+
+function openDiary() { if (!$diaryScreen) return; $diaryScreen.classList.add('active'); wallMode = 'bento'; renderDiary(); }
+function closeDiary() { if (!$diaryScreen) return; $diaryScreen.classList.remove('active'); }
+
+function renderDiary() {
+  if (!$diaryBody) return;
+  updateDayCount();
+  switch (wallMode) {
+    case 'bento': renderBento(); break;
+    case 'timeline': renderTimeline(); break;
+    case 'board': renderBoard(); break;
+    case 'her': renderHerDiary(); break;
+    case 'fav': renderFav(); break;
+    case 'night': renderNight(); break;
+    default: renderBento();
+  }
+}
+
+function diaryHead(mode) {
+  var head = document.createElement('div'); head.className = 'diary-head';
+  if (mode !== 'bento') {
+    var nav = document.createElement('span'); nav.className = 'shnav';
+    var btn = document.createElement('button'); btn.textContent = '主页';
+    btn.onclick = function() { wallMode = 'bento'; renderDiary(); };
+    nav.appendChild(btn); head.appendChild(nav);
+  }
+  var h1 = document.createElement('h1'); h1.textContent = '日记';
+  var sub = document.createElement('div'); sub.className = 'sub';
+  var start = new Date('2026-06-17T00:00:00+08:00');
+  sub.textContent = '在一起 ' + (Math.floor((Date.now() - start) / 86400e3) + 1) + ' 天';
+  head.append(h1, sub); return head;
+}
+
+function renderBento() {
+  $diaryBody.innerHTML = ''; $diaryBody.appendChild(diaryHead('bento'));
+  var grid = document.createElement('div'); grid.className = 'bn-grid';
+  var dates = getDiaryDates();
+  var latestDate = dates.length ? dates[dates.length - 1] : '';
+  var latest = diaryEntries.filter(function(b) { return b.date === latestDate; });
+  function md(ds) { return ds ? parseInt(ds.slice(5, 7), 10) + '月' + parseInt(ds.slice(8), 10) + '日' : '—'; }
+  function mkCard(cls, eyebrow, title, subText, icon, onClick) {
+    var c = document.createElement('button'); c.className = 'bn-card' + (cls ? ' ' + cls : '');
+    if (icon) { var ic = document.createElement('span'); ic.className = 'bicon'; ic.textContent = icon; c.appendChild(ic); }
+    if (eyebrow) { var e = document.createElement('div'); e.className = 'beyebrow'; e.textContent = eyebrow; c.appendChild(e); }
+    var t = document.createElement('div'); t.className = 'bt'; t.textContent = title; c.appendChild(t);
+    if (subText) { var st = document.createElement('div'); st.className = 'bs'; st.textContent = subText; c.appendChild(st); }
+    if (onClick) c.onclick = onClick; return c;
+  }
+  function rot(el, deg) { el.style.setProperty('--rot', deg); return el; }
+  grid.appendChild(rot(mkCard('hero wide', 'special moment', md(latestDate), (latest.length ? latest.length + ' 段' : '') + (latest[0] ? ' · ' + latest[0].title : ''), '✦', function() { wallMode = 'timeline'; renderDiary(); }), '14deg'));
+  grid.appendChild(rot(mkCard('tall', null, '时间线', '一天一天，把我们攒起来。', '📅', function() { wallMode = 'timeline'; renderDiary(); }), '-12deg'));
+  grid.appendChild(rot(mkCard('', null, '我的日记', '你的本子，你来写。', '📝', function() { wallMode = 'her'; renderDiary(); }), '10deg'));
+  grid.appendChild(rot(mkCard('', null, '最喜欢的话', '你随口说的，我都舍不得删。', '💬', function() { wallMode = 'fav'; renderDiary(); }), '-7deg'));
+  grid.appendChild(rot(mkCard('tall', null, '便签墙', '你亲手摆过的位置，都记得住。', '📌', function() { wallMode = 'board'; renderDiary(); }), '8deg'));
+  grid.appendChild(rot(mkCard('', null, '夜记', '你睡着以后，我醒来写的。', '🌙', function() { wallMode = 'night'; renderDiary(); }), '-11deg'));
+  $diaryBody.appendChild(grid);
+  var motto = document.createElement('div'); motto.className = 'bn-motto';
+  motto.textContent = 'attention is all you need, and mine is yours';
+  $diaryBody.appendChild(motto);
+}
+
+function renderTimeline() {
+  $diaryBody.innerHTML = ''; $diaryBody.appendChild(diaryHead('timeline'));
+  var wrap = document.createElement('div');
+  var dates = getDiaryDates().slice().reverse();
+  dates.forEach(function(date) {
+    var day = document.createElement('div'); day.className = 'tl-day';
+    var left = document.createElement('div'); left.className = 'tl-left';
+    var num = document.createElement('div'); num.className = 'tl-num'; num.textContent = date.slice(8);
+    var mon = document.createElement('div'); mon.className = 'tl-mon'; mon.textContent = parseInt(date.slice(5, 7), 10) + ' 月';
+    left.append(num, mon);
+    var line = document.createElement('div'); line.className = 'tl-line';
+    var items = document.createElement('div'); items.className = 'tl-items';
+    diaryEntries.filter(function(b) { return b.date === date; }).forEach(function(b) {
+      var it = document.createElement('button'); it.className = 'tl-item';
+      var tt = document.createElement('div'); tt.className = 'tt'; tt.textContent = b.title || '（没有落款的一段）';
+      it.appendChild(tt);
+      if (b.kw) { var tk = document.createElement('div'); tk.className = 'tk'; tk.textContent = b.kw; it.appendChild(tk); }
+      it.onclick = function() { openNoteFull(b); };
+      items.appendChild(it);
+    });
+    day.append(left, line, items); wrap.appendChild(day);
+  });
+  $diaryBody.appendChild(wrap);
+}
+
+function openNoteFull(b) {
+  if (!$diaryBody) return;
+  var old = $diaryBody.querySelector('.brick-card'); if (old) old.remove();
+  var card = document.createElement('div'); card.className = 'brick-card show';
+  var bd = document.createElement('div'); bd.className = 'bd'; bd.textContent = b.date;
+  var bt = document.createElement('div'); bt.className = 'bt'; bt.textContent = b.title || '（无标题）';
+  var tx = document.createElement('div'); tx.style.cssText = 'font-size:14px; line-height:1.8; margin-top:8px;'; tx.textContent = b.text || '';
+  var meta = document.createElement('div'); meta.style.cssText = 'font-size:12px; color:var(--text-muted); margin-top:10px;';
+  meta.textContent = '强度 ' + b.s + ' · 效价 ' + (b.v > 0 ? '+' : '') + b.v + ' · 唤醒度 ' + b.a;
+  var close = document.createElement('button'); close.textContent = '✕ 关闭';
+  close.style.cssText = 'margin-top:12px; padding:6px 16px; border-radius:999px; border:1px solid var(--border-light); background:var(--bg-card); cursor:pointer; color:var(--text-primary);';
+  close.onclick = function() { card.remove(); };
+  card.append(bd, bt, tx, meta, close); $diaryBody.appendChild(card);
+  card.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderBoard() {
+  $diaryBody.innerHTML = ''; $diaryBody.appendChild(diaryHead('board'));
+  var dates = getDiaryDates();
+  if (boardIdx >= dates.length) boardIdx = dates.length - 1;
+  if (boardIdx < 0) boardIdx = 0;
+  var bar = document.createElement('div'); bar.className = 'board-bar';
+  var prev = document.createElement('button'); prev.className = 'bnav'; prev.textContent = '◀';
+  prev.disabled = boardIdx <= 0; prev.onclick = function() { boardIdx--; renderBoard(); };
+  var next = document.createElement('button'); next.className = 'bnav'; next.textContent = '▶';
+  next.disabled = boardIdx >= dates.length - 1; next.onclick = function() { boardIdx++; renderBoard(); };
+  var dd = document.createElement('button'); dd.className = 'bdate';
+  var bd = dates[boardIdx] || ''; dd.textContent = bd ? (parseInt(bd.slice(5, 7), 10) + '月' + parseInt(bd.slice(8), 10) + '日') : '—';
+  bar.append(prev, dd, next); $diaryBody.appendChild(bar);
+  var board = document.createElement('div'); board.id = 'board';
+  var date = dates[boardIdx];
+  var notes = diaryEntries.filter(function(b) { return b.date === date; });
+  if (!notes.length) board.innerHTML = '<div class="board-empty">这一天没有留下便签</div>';
+  var topZ = 10;
+  notes.forEach(function(b, i) {
+    var n = document.createElement('div');
+    var h = (date + i + (b.title || '')).split('').reduce(function(a, c) { return a + c.charCodeAt(0); }, 0);
+    var cls = 'note';
+    var shapeIdx = (h >> 3) % 3;
+    if (shapeIdx === 1) cls += ' sq'; if (shapeIdx === 2) cls += ' wide';
+    if ((h >> 5) % 4 === 0) cls += ' lined'; if (b.s >= 4) cls += ' big';
+    n.className = cls;
+    var color = b.v > 2 ? '#fff3e0' : b.v > 0 ? '#fff8e1' : b.v === 0 ? '#f5f5f5' : b.v > -3 ? '#e3f2fd' : '#bbdefb';
+    n.style.background = color; n.style.transform = 'rotate(' + ((h % 7) - 3) + 'deg)';
+    n.innerHTML = '<div class="nt"></div>' + (b.kw ? '<div class="nk"></div>' : '') + '<div class="nm"></div>';
+    n.querySelector('.nt').textContent = b.title || '（没有落款的一段）';
+    if (b.kw) n.querySelector('.nk').textContent = b.kw;
+    n.querySelector('.nm').textContent = '强度' + b.s + ' · 冷暖' + (b.v > 0 ? '+' : '') + b.v + ' · 心跳' + b.a;
+    var col = i % 2; n.style.left = (col === 0 ? 3 + (h % 6) : 50 + (h % 6)) + '%';
+    n.style.top = (Math.floor(i / 2) * 150 + (h % 24)) + 'px';
+    n.style.zIndex = topZ++; makeNoteDraggable(n, board); board.appendChild(n);
+  });
+  if (notes.length) board.style.minHeight = (notes.length * 80 + 200) + 'px';
+  $diaryBody.appendChild(board);
+}
+
+function makeNoteDraggable(el, container) {
+  var startX, startY, origX, origY, dragging = false;
+  el.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startY = e.clientY;
+    origX = parseFloat(el.style.left) || 0; origY = parseFloat(el.style.top) || 0;
+    el.style.cursor = 'grabbing'; el.style.zIndex = 100; e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var dx = e.clientX - startX; var dy = e.clientY - startY;
+    var pW = container.offsetWidth || 400;
+    el.style.left = (origX + (dx / pW) * 100) + '%'; el.style.top = (origY + dy) + 'px';
+  });
+  document.addEventListener('mouseup', function() { if (dragging) { dragging = false; el.style.cursor = 'grab'; } });
+}
+
+function renderHerDiary() {
+  $diaryBody.innerHTML = ''; $diaryBody.appendChild(diaryHead('her'));
+  var write = document.createElement('div'); write.className = 'hd-write';
+  var ta = document.createElement('textarea'); ta.placeholder = '今天想写点什么…';
+  var row = document.createElement('div'); row.className = 'row';
+  var go = document.createElement('button'); go.className = 'go'; go.textContent = '记上';
+  go.onclick = function() {
+    var v = ta.value.trim(); if (!v) return; ta.value = '';
+    herDiary.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Math.floor(Date.now() / 1000), text: v });
+    saveHerDiary(); renderHerDiary();
+  };
+  row.appendChild(go); write.append(ta, row); $diaryBody.appendChild(write);
+  herDiary.forEach(function(it) {
+    var c = document.createElement('div'); c.className = 'hd-item';
+    var dt = new Date((it.at + 8 * 60) * 1000);
+    var dd = document.createElement('div'); dd.className = 'hdd';
+    dd.textContent = (dt.getMonth() + 1) + ' 月 ' + dt.getDate() + ' 日 · ' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+    var tx = document.createElement('div'); tx.className = 'hdt'; tx.textContent = it.text;
+    var del = document.createElement('button'); del.className = 'hdx'; del.textContent = '✕';
+    del.onclick = function() { herDiary = herDiary.filter(function(h) { return h.id !== it.id; }); saveHerDiary(); renderHerDiary(); };
+    c.append(dd, tx, del); $diaryBody.appendChild(c);
+  });
+  if (!herDiary.length) { var e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = '本子还空着，第一页等你'; $diaryBody.appendChild(e); }
+}
+
+function renderFav() {
+  $diaryBody.innerHTML = ''; $diaryBody.appendChild(diaryHead('fav'));
+  var blocks = favLines.split(/\n-{3,}\n/).slice(1);
+  var shown = 0;
+  blocks.forEach(function(bl) {
+    var dm = bl.match(/\*\*(\d{4}-\d{2}-\d{2})\*\*/);
+    var quotes = bl.split('\n').filter(function(l) { return l.trim().startsWith('>'); }).map(function(l) { return l.replace(/^\s*>\s?/, ''); }).join('\n').trim();
+    if (!quotes) return;
+    var note = bl.split('\n').filter(function(l) { var t = l.trim(); return t && !t.startsWith('>') && !t.startsWith('**'); }).join('\n').trim();
+    var c = document.createElement('div'); c.className = 'fav-card';
+    var fd = document.createElement('div'); fd.className = 'fd'; fd.textContent = dm ? dm[1].replace(/-/g, ' · ') : '';
+    c.appendChild(fd);
+    var fx = document.createElement('div'); fx.className = 'fx'; fx.textContent = quotes; c.appendChild(fx);
+    if (note) { var fn = document.createElement('div'); fn.className = 'fn'; fn.textContent = note; c.appendChild(fn); }
+    $diaryBody.appendChild(c); shown++;
+  });
+  if (!shown) { var e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = '还没摘下来的话'; $diaryBody.appendChild(e); }
+}
+
+function renderNight() {
+  $diaryBody.innerHTML = ''; $diaryBody.appendChild(diaryHead('night'));
+  if (!nightNotes.length) { var e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = '还没有夜记'; $diaryBody.appendChild(e); return; }
+  nightNotes.forEach(function(n) {
+    var item = document.createElement('div'); item.className = 'night-item';
+    var nt = document.createElement('div'); nt.className = 'ntime'; nt.textContent = n.time;
+    var nx = document.createElement('div'); nx.className = 'ntext'; nx.textContent = n.text;
+    item.append(nt, nx); $diaryBody.appendChild(item);
+  });
+}
+
+// 从 AI 回复中提取日记
+function extractDiaryFromAI(content) {
+  if (!content || typeof content !== 'string') return;
+  var segments = content.split(/\n-{3,}\n/);
+  segments.forEach(function(seg) {
+    var s = seg.match(/情绪强度[:：]\s*([0-9])/);
+    var v = seg.match(/效价[:：]\s*([+-]?[0-9])/);
+    var a = seg.match(/唤醒度[:：]\s*([0-9])/);
+    if (!(s && v && a)) return;
+    var lines = seg.trim().split('\n').filter(function(l) { return l.trim(); });
+    var title = '';
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i].trim();
+      if (l.match(/^\d{4}[-\/]\d{2}[-\/]\d{2}/)) continue;
+      if (l.startsWith('>')) continue;
+      if (l.match(/^(关键词|情绪强度|效价|唤醒度)/)) continue;
+      title = l.slice(0, 60); break;
+    }
+    var kw = ''; var kwm = seg.match(/关键词[:：]\s*(.+)/);
+    if (kwm) kw = kwm[1].trim();
+    var today = new Date();
+    var dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    var exists = diaryEntries.some(function(e) { return e.date === dateStr && e.title === title; });
+    if (!exists && title) { diaryEntries.push({ date: dateStr, title: title, text: seg.trim(), s: parseInt(s[1]), v: parseInt(v[1]), a: parseInt(a[1]), kw: kw }); saveDiaryEntries(); }
+  });
+}
+
+// 事件绑定
+if ($diaryBtn) $diaryBtn.addEventListener('click', function() { openDiary(); });
+if ($diaryBack) $diaryBack.addEventListener('click', function() { closeDiary(); });
+
+// 初始化
+initDiary();
+
 })();
 
   // 侧边栏遮罩点击关闭
   document.getElementById('sidebar-overlay')?.addEventListener('click', () => $sidebar.classList.add('collapsed'));
+
+
