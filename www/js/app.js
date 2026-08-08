@@ -690,10 +690,23 @@
       if (m.role === 'user') md += '**你**\n' + m.content + '\n\n';
       else md += '**十四行诗**\n' + m.content + '\n\n';
     });
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = conv.title + '.md'; a.click();
-    URL.revokeObjectURL(url); showToast('已导出为 Markdown ✦');
+    // Capacitor 原生文件写入（Android WebView 不支持 a[download] 保存）
+    if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Filesystem) {
+      const fs = Capacitor.Plugins.Filesystem;
+      const safeName = conv.title.replace(/[\/\\:*?"<>|]/g, '_').slice(0, 40) + '.md';
+      fs.writeFile({
+        path: safeName,
+        data: md,
+        directory: 'DOCUMENTS',
+        recursive: true
+      }).then(function() { showToast('已导出到 文档/' + safeName + ' ✦'); })
+        .catch(function(err) { showToast('导出失败: ' + (err && err.message ? err.message : '未知错误')); });
+    } else {
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = conv.title + '.md'; a.click();
+      URL.revokeObjectURL(url); showToast('已导出为 Markdown ✦');
+    }
   }
 
   function toggleTheme() {
