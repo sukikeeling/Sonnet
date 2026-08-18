@@ -1,0 +1,8 @@
+{
+  "appId": "com.sonnet.app",
+  "appName": "Sonnet",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -71,6 +71,7 @@
       <button id="sidebar-new-chat" class="sidebar-btn primary" title="新建对话">✚ 新对话</button>
       <button id="sidebar-toggle" class="sidebar-btn icon-btn" title="收起侧栏">◀</button>
     </div>
+    <button id="sidebar-diary" class="sidebar-btn primary" title="日记">日记</button>
     <div class="sidebar-search">
       <input type="text" id="sidebar-search-input" placeholder="搜索对话..." class="sidebar-field">
     </div>
@@ -99,6 +100,7 @@
       <button id="sidebar-theme" class="sidebar-btn text-btn" title="切换暗色/浅色">🌙 暗色</button>
     </div>
   </aside>
+  <div id="sidebar-overlay"></div>
 
   <div id="chat-screen">
     <div class="chat-watermark" aria-hidden="true"></div>
@@ -113,7 +115,7 @@
     <div id="chat-messages">
       <div class="chat-hero" data-keep>
         <div class="hero-brand">SONNET · 十四行诗</div>
-        <h1 class="hero-title"><span class="star-click" id="star-left" title="点我">✦</span> Sonnet <span class="star-click" id="star-right" title="点我">✦</span></h1>
+        <h1 class="hero-title">✦ Sonnet ✦</h1>
         <div class="hero-divider"></div>
         <p class="hero-subtitle">说人话就好，宝宝 ✦</p>
         <button class="clear-chat-btn" id="btn-clear-chat">清除对话</button>
@@ -135,7 +137,7 @@
       <div class="input-wrapper">
         <textarea id="chat-input" rows="1" placeholder="说人话就好～" maxlength="4096"></textarea>
         <button id="btn-send" class="send-btn" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
         </button>
       </div>
       <div class="input-hint"><span id="token-count">0</span> tokens · <span id="char-count">0</span>/4096 · Enter 发送 · Shift+Enter 换行</div>
@@ -157,21 +159,28 @@
       <label class="field-label">API Key</label>
       <input type="password" id="s-api-key" class="field-input" placeholder="输入你的 API Key">
       <label class="field-label">服务商</label>
-      <select id="s-provider" class="field-input">
+      <label class="field-label">服务商</label>
+      <select id="s-provider" class="field-input" style="display:none">
         <option value="deepseek">DeepSeek</option>
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
         <option value="custom">自定义 / 中转站</option>
       </select>
+      <div class="cs-select" id="provider-cs">
+        <div class="cs-trigger">
+          <span class="cs-trigger-label"><span class="cs-dot cs-dot-deepseek"></span><span class="cs-label">DeepSeek</span></span>
+          <svg class="cs-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="cs-menu">
+          <div class="cs-option" data-value="deepseek"><span class="cs-dot cs-dot-deepseek"></span>DeepSeek</div>
+          <div class="cs-option" data-value="custom"><span class="cs-dot cs-dot-custom"></span>自定义 / 中转站</div>
+        </div>
+      </div>
+      
       <label class="field-label">API 地址</label>
       <input type="text" id="s-api-url" class="field-input" placeholder="选择服务商后自动填写">
       <label class="field-label">模型</label>
       <input type="text" id="s-model" class="field-input" placeholder="输入模型名称">
       <div class="model-quick-fill" id="model-presets">
-        <button class="quick-fill-btn" data-provider="deepseek" data-model="deepseek-chat" data-url="https://api.deepseek.com/v1">deepseek-chat</button>
         <button class="quick-fill-btn" data-provider="deepseek" data-model="deepseek-v4-flash" data-url="https://api.deepseek.com/v1">deepseek-v4-flash</button>
-        <button class="quick-fill-btn" data-provider="openai" data-model="gpt-4o" data-url="https://api.openai.com/v1">gpt-4o</button>
-        <button class="quick-fill-btn" data-provider="openai" data-model="gpt-4o-mini" data-url="https://api.openai.com/v1">gpt-4o-mini</button>
         <button class="quick-fill-btn" data-provider="custom" data-model="" data-url="">自定义</button>
       </div>
     </div>
@@ -190,14 +199,48 @@
   </div>
 </div>
 
+<!-- 日记页面 -->
+<div id="diary-screen">
+  <div id="diary-header">
+    <button id="diary-back" class="topbar-btn" title="返回">←</button>
+    <h1>日记</h1>
+    <span class="diary-day-count" id="diary-day-count"></span>
+  </div>
+  <div id="diary-body"></div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.0/purify.min.js"></script>
+<!-- 删除确认灵动弹窗 -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-card">
+    <div class="confirm-avatar-wrap">
+      <div class="confirm-spinner" aria-hidden="true"></div>
+      <div class="confirm-avatar">✦</div>
+    </div>
+    <div class="confirm-content">
+      <div class="confirm-title">删去这一章？</div>
+      <div class="confirm-msg" id="confirm-msg">这一页诗笺将化作流萤散入夜风……<br>你确定要亲手合上它吗？</div>
+      <div class="confirm-actions">
+        <button class="confirm-btn cancel" id="confirm-cancel">再想一想</button>
+        <button class="confirm-btn danger" id="confirm-ok">就删了吧</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js?v=13"></script>
 </body>
 </html>
+
+
+
+
+
+
 
 
 

@@ -719,6 +719,26 @@ input::-webkit-scrollbar { display: none; }
 .sidebar-btn.icon-btn:active { transform: scale(0.9) translateY(0); }
 .sidebar-btn.text-btn { background: transparent; border: none; color: var(--text-muted); padding: 8px 4px; font-size: 12px; }
 .sidebar-btn.text-btn:hover { color: var(--text-primary); }
+#sidebar-diary {
+  width: calc(100% - 24px); margin: 4px 12px 0;
+  padding: 5px 0; font-size: 12px;
+  letter-spacing: 0.08em;
+  position: relative;
+}
+#sidebar-diary::before {
+  content: "✦";
+  position: absolute; left: 20px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px; opacity: 0.7;
+  animation: starFloat 4s ease-in-out infinite;
+}
+#sidebar-diary::after {
+  content: "✦";
+  position: absolute; right: 20px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px; opacity: 0.7;
+  animation: starFloat 4s ease-in-out infinite 2s;
+}
 .sidebar-search { padding: 8px 12px; }
 .sidebar-field,
 .sidebar-conv-item {
@@ -2163,3 +2183,38 @@ input::-webkit-scrollbar { display: none; }
   .note.sq { width: 32%; }
   #diary-body { padding: 12px 14px 20px; }
 }
+
+/* --- 日记系统深色模式适配 --- */
+[data-theme="dark"] .bn-card {
+  background: var(--bg-card-solid);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .bn-card .bs { opacity: .6; }
+[data-theme="dark"] .bn-card .beyebrow { opacity: .6; }
+[data-theme="dark"] .bn-card .bicon { opacity: .1; }
+[data-theme="dark"] .bn-card.hero { background: linear-gradient(135deg, #7a4a6a, #6a3a5a); }
+[data-theme="dark"] .bn-motto { opacity: .5; }
+[data-theme="dark"] .tl-item { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .tl-item:hover { border-color: var(--accent-1); }
+[data-theme="dark"] .tl-line { background: var(--border-color); }
+[data-theme="dark"] .board-bar .bnav { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .board-bar .bdate { color: var(--text-primary); }
+[data-theme="dark"] .dp { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .dpd { color: var(--text-primary); }
+[data-theme="dark"] .dpd:hover { background: var(--border-color); }
+[data-theme="dark"] .hd-write { background: var(--bg-card-solid); }
+[data-theme="dark"] .hd-write textarea { color: var(--text-primary); }
+[data-theme="dark"] .hd-item { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .fav-card { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .fav-card .fx { color: var(--text-secondary); }
+[data-theme="dark"] .brick-card { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .note { box-shadow: 0 3px 12px rgba(0,0,0,.45); }
+[data-theme="dark"] .note.lined .nt { border-bottom-color: rgba(255,255,255,.08); }
+[data-theme="dark"] #diary-header { background: var(--bg-card-solid); }
+[data-theme="dark"] .diary-head .shnav button { background: var(--bg-card-solid); border-color: var(--border-color); }
+[data-theme="dark"] .diary-head .shnav button:hover { border-color: var(--accent-1); }
+[data-theme="dark"] .night-item .ntime { color: var(--text-muted); }
+[data-theme="dark"] .wall-month { color: var(--text-muted); }
+[data-theme="dark"] .wall-month::after { border-top-color: var(--border-color); }
+
+

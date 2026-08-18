@@ -1155,7 +1155,7 @@
 const $diaryScreen = document.getElementById('diary-screen');
 const $diaryBody   = document.getElementById('diary-body');
 const $diaryBack   = document.getElementById('diary-back');
-const $diaryBtn    = document.getElementById('btn-diary');
+const $diaryBtn    = document.getElementById('sidebar-diary');
 const $diaryDayCount = document.getElementById('diary-day-count');
 
 // --- 存储键 ---
@@ -1456,6 +1456,22 @@ function extractDiaryFromAI(content) {
 if ($diaryBtn) $diaryBtn.addEventListener('click', function() { openDiary(); });
 if ($diaryBack) $diaryBack.addEventListener('click', function() { closeDiary(); });
 
+// Android 硬件返回键监听
+window.addEventListener('popstate', function() {
+  if ($diaryScreen && $diaryScreen.classList.contains('active')) {
+    closeDiary();
+  }
+});
+// 打开日记时 push 一个 state，让返回键能触发 popstate
+var _origOpenDiary = openDiary;
+openDiary = function() {
+  if (!$diaryScreen) return;
+  history.pushState({ diary: true }, '');
+  $diaryScreen.classList.add('active');
+  wallMode = 'bento';
+  renderDiary();
+};
+
 // 初始化
 initDiary();
 
@@ -1463,5 +1479,8 @@ initDiary();
 
   // 侧边栏遮罩点击关闭
   document.getElementById('sidebar-overlay')?.addEventListener('click', () => $sidebar.classList.add('collapsed'));
+
+
+
 
 
