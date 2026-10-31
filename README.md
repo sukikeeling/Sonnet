@@ -147,3 +147,7 @@ Sonnet/
 ## 📄 开源协议
 
 MIT — 详见 [LICENSE](LICENSE)
+
+## 仓库声明
+
+本仓库的署名与参考规范见 [NOTICE](NOTICE)：参考、借鉴或改造本仓库时，请标明来源 sukikeeling/Sonnet。
